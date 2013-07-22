@@ -71,6 +71,50 @@ function Symbol(name){
 /// <param name="row">Row number</param>
 /// <param name="column">Column number</param>
 /// <returns><code>true</code> if no need to process this line. Otherwise, <code>false</code> is returned.</returns>
+funtion CreateSpecialSymbol(file, value, row, column)
+{
+            var str;
+            switch (value)
+            {
+                case '\n':
+                    str = '\n';
+                    break;
+                case '{':
+                    str = "{";
+                    break;
+                case '}':
+                    str = "}";
+                    break;
+                case '(':
+                    str = "(";
+                    break;
+                case ')':
+                    str = ")";
+                    break;
+                case '[':
+                    str = "[";
+                    break;
+                case ']':
+                    str = "]";
+                    break;
+                case ';':
+                    str = ";";
+                    break;
+                case ',':
+                    str = ",";
+                    break;
+                case '|':
+                    str = "|";
+                    break;
+                default:
+                    //throw new ArgumentException("value is not a special character");
+            }
+        
+            return new Symbol(file, str, row, column);
+}
+
+
+
 function Parse(file, current, row, column)//bool
 {
             switch (current){
