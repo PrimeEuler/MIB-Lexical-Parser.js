@@ -1,7 +1,7 @@
 //pork fork from https://github.com/lextm/sharpsnmplib/blob/master/Archive/Mib/
 //
 //
-//
+//https://github.com/lextm/sharpsnmplib/blob/master/Archive/Mib/Symbol.cs
 var Definitions = new Symbol("DEFINITIONS");
 var  Begin = new Symbol("BEGIN");        
 var  Object = new Symbol("OBJECT");        
@@ -61,6 +61,8 @@ var  Of = new Symbol("OF");
 function Symbol(name){
     return(name);
 }
+
+///https://github.com/lextm/sharpsnmplib/blob/master/Archive/Mib/Lexer.cs
 /// <summary>
 /// Parses a list of <see cref="char"/> to <see cref="Symbol"/>.
 /// </summary>
