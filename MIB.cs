@@ -1960,6 +1960,8 @@ namespace SCAN
                 public String _SysName = "";       //1.3.6.1.2.1.1.5.0
                 public String _SysMac = "";        //1.3.6.1.2.1.2.2.1.6.1
                 public DataSet DS;
+                public ArrayList Vlans;
+                public int VlansIndex;
                 public bool ICMP;
                 public bool NETB;
                 public bool AGNT;
