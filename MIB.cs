@@ -3319,11 +3319,25 @@ namespace SCAN
                                     }
                                     else if (Walk && _oid != "0")//GET NEXT ONLY IF MORE THAN 0 IN CURRENT OID
                                     {
-
-
                                         Thread.Sleep(Delay1);
                                         Thread.SpinWait(Delay2);
-                                        UDP__Socket.SendTo(SNMP.encode(cs, SNMP_OB.OI, null, SNMP._Type.Next), RemoteEP);
+                                            string str2 = "";
+                                            if ("vmMembershipEntry" == _mib)
+                                            {
+                                                try
+                                                {
+                                                    str2 = MIBScanner.Network.GetU32(@object.OV).ToString();
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    Console.WriteLine(ex.Message);
+                                                }
+                                                Console.WriteLine(RemoteEP.ToString() + "\t" + _mib + "\t" + string1 + "\t" + OID + "\t" + _oid + "\t" + str2 + "\t");
+                                                if (str2 != "" && !device.Vlans.Contains((object)str2))
+                                                    device.Vlans.Add((object)str2);
+                                            }
+                                            this.UDP__Socket.SendTo(MIBScanner.Network.SNMP.encode(string1, @object.OI, (string)null, MIBScanner.Network.SNMP._Type.Next), RemoteEP);
+                                        //UDP__Socket.SendTo(SNMP.encode(cs, SNMP_OB.OI, null, SNMP._Type.Next), RemoteEP);
                                     }
 
                                 }
