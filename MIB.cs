@@ -3021,6 +3021,8 @@ namespace SCAN
                 /// <param name="delay"></param>
                 /// <param name="dir"></param>
                 /// <param name="MIBList"></param>
+                ///CISCDiscovery
+                ///string MIBList = "ifEntry,ifXEntry,ipAddrEntry,dot1dBasePortEntry,vtpVlanEntry,vlanPortEntry,portEntry,cdpCacheEntry,vmMembershipEntry,ipNetToMediaEntry,chassis,cardTableEntry,cardIfIndexEntry,";
                 public Scanner(String Start_Host, String Stop_Host, String _CS, int delay, String dir, String MIBList, bool AgentScan, bool DisplayAll, bool AutoXMLReport)
                 {
                     MIBList = MIBSystem + MIBType + MIBList;//Manditory
