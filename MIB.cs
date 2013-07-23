@@ -3120,6 +3120,43 @@ namespace SCAN
 
                     }
                     Thread_SNMP.Join();
+                    
+                    
+                    //VLAN SCANNING
+                    this.OIDS = (MIBScanner.Network.ArrayLists.Lists)null;
+                    this.OIDS = new MIBScanner.Network.ArrayLists.Lists();
+                    this.mibs = (string[])null;
+                    this.mibs = new string[3];
+                    this.mibs = "dot1dTpFdbEntry,dot1dBasePortEntry".Split(",".ToCharArray());
+                    this.BuildOIDS();
+                    this.CS = (string[])null;
+                    this.CS = new string[1];
+                    for (int index1 = 0; index1 < 1; ++index1)
+                    {
+                        for (uint index2 = this.Start; index2 <= this.Stop; ++index2)
+                        {
+                            if (this.HOSTS.TryGetValue((object)index2, out obj))
+                            {
+                                MIBScanner.Network.Device dev = (MIBScanner.Network.Device)obj;
+                                if (dev.SNMP && dev.Vlans.Count > 0)
+                                {
+                                    dev.Vlans.Sort();
+                                    for (int index3 = 0; index3 < dev.Vlans.Count; ++index3)
+                                    {
+                                        this.CS[0] = dev.CS + "@" + dev.Vlans[index3].ToString();
+                                        Socket _Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                                        _Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, this.TimeOut);
+                                        _Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+                                        EndPoint RemoteEP = (EndPoint)new IPEndPoint(dev.IPAddress, 161);
+                                        byte[] numArray = MIBScanner.Network.SNMP.OID(this.MIBS.GetOIDS(this.mibs[0])[0]);
+                                        _Socket.SendTo(MIBScanner.Network.SNMP.encode(this.CS[0], numArray, (string)null, MIBScanner.Network.SNMP._Type.Next), RemoteEP);
+                                        this.rxit(ref _Socket, ref RemoteEP, ref dev, 0, numArray, this.CS[0]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    //VLAN SCANNING
                     Thread Thread_NETB = new Thread(new ThreadStart(UDP__Receive));
                     Thread_NETB.Start();
                     for (int Xs = 0; Xs < 1; Xs++)
@@ -3179,6 +3216,53 @@ namespace SCAN
                 }
 
                 #region Scanning
+                //VLAN SCANNING
+                private void rxit(ref Socket _Socket, ref EndPoint RemoteEP, ref MIBScanner.Network.Device dev, int i, byte[] oidy, string csdd)
+                {
+                    byte[] buffer = new byte[(int)ushort.MaxValue];
+                    try
+                    {
+                        int length = _Socket.ReceiveFrom(buffer, ref RemoteEP);
+                        byte[] MSG = new byte[length];
+                        Array.Copy((Array)buffer, (Array)MSG, length);
+                        MIBScanner.Network.SNMP._Object @object = MIBScanner.Network.SNMP.decode(MSG);
+                        if (@object.Error_Status != MIBScanner.Network.SNMP.Error_Type.noError)
+                            return;
+                        string OID = "";
+                        string _oid = "";
+                        string _mib = "";
+                        string str = "";
+                        string _OID = MIBScanner.Network.SNMP.OID(@object.OI);
+                        string @string = Encoding.ASCII.GetString(@object.CS);
+                        if (this.OID_FOUND(_OID, out OID, out _oid, out _mib))
+                            dev.OIDS.Add((object)_OID, (object)@object.OV);
+                        try
+                        {
+                            str = MIBScanner.Network.GetU32(@object.OV).ToString();
+                        }
+                        catch
+                        {
+                        }
+                        Console.WriteLine(RemoteEP.ToString() + "\t" + _mib + "\t" + @string + "\t" + OID + "\t" + _oid + "\t" + str + "\t");
+                        if ("dot1dBasePortEntry" == _mib || "dot1dTpFdbEntry" == _mib)
+                        {
+                            _Socket.SendTo(MIBScanner.Network.SNMP.encode(@string, @object.OI, (string)null, MIBScanner.Network.SNMP._Type.Next), RemoteEP);
+                            this.rxit(ref _Socket, ref RemoteEP, ref dev, i, @object.OI, csdd);
+                        }
+                        else
+                        {
+                            ++i;
+                            if (i < this.mibs.Length)
+                            {
+                                _Socket.SendTo(MIBScanner.Network.SNMP.encode(@string, MIBScanner.Network.SNMP.OID(this.MIBS.GetOIDS(this.mibs[i])[0]), (string)null, MIBScanner.Network.SNMP._Type.Next), RemoteEP);
+                                this.rxit(ref _Socket, ref RemoteEP, ref dev, i, MIBScanner.Network.SNMP.OID(this.MIBS.GetOIDS(this.mibs[i])[0]), csdd);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
                 private void populate_device(EndPoint RemoteEP, Byte[] Data)
                 {
                     String EP = RemoteEP.ToString();
