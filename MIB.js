@@ -58,9 +58,76 @@ var  Augments = new Symbol("AUGMENTS");
 var  DefVal = new Symbol("DEFVAL");
 var  Of = new Symbol("OF");
 
+
+
+
+
+
+
+//symbol
+var _name="";
+var _text="";
+var _row="";
+var _column="";
+var _file="";
 function Symbol(name){
-    return(name);
+    _name = name
 }
+function Symbol(file, text, row, column){
+    _file = file;
+    _text = text;
+    _row = row;
+    _column = column;
+}
+Symbol.prototype.name = function(){
+    return _name
+}
+Symbol.prototype.file = function(){
+    return _file
+}
+Symbol.prototype.row = function(){
+    return _row
+}
+Symbol.prototype.column = function(){
+    return _column
+}
+Symbol.prototype.file = function(){
+    return _file
+}
+
+
+//stream
+var fs = require('fs');
+var dir = "..\GitHub\sharpsnmplib\Tests\Resources\";
+var files = ['RFC1155-SMI.txt',
+             'RFC1157-SNMP.mib',
+             'RFC-1212.MIB.txt',
+             'RFC1213-MIB.MIB'];
+var lines = fs.readFileSync(dir + files[0]);
+function stream(){};
+stream.prototype.ReadLine = function(){
+}
+//lexer
+function lexer(){};
+lexer.prototype.Parse(file, stream){
+    if (stream == null){
+        throw new Error("stream");
+    }
+            
+var _assignAhead = false;
+var _assignSection = false;
+var _stringSection = false;
+            
+var line;
+var i = 0;
+while ((line = stream.ReadLine()) != null)
+{
+    ParseLine(file, line, i);
+    i++;
+}
+}
+
+
 
 ///https://github.com/lextm/sharpsnmplib/blob/master/Archive/Mib/Lexer.cs
 /// <summary>
