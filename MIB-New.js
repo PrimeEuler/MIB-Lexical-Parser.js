@@ -84,7 +84,7 @@ var CharBuffer = function () {
             var content = this._builder.toString();
             this._builder = "";
             this._builder.length = 0;
-            symbols.Add(new Symbol(file, content, row, column));
+            symbols.push(new Symbol(file, content, row, column));
         }
     }
     return _this;
@@ -101,7 +101,7 @@ function Symbol (file, text, row, column) {
     this.column = column;
 };
 Symbol.prototype.Expect = function (expected) {
-    Assert(this == expected, expected + " expected");
+    this.Assert(this == expected, expected + " expected");
 }
 Symbol.prototype.Assert = function (condition, message) {
     if (condition) {
@@ -175,29 +175,27 @@ Symbol.Of = new Symbol("", "OF", -1, -1);
 /**
 * Lexer.cs 
 */
-function Lexer() { };
-Lexer._index = 0;
-Lexer._symbols = new Array();
-Lexer._symbols.Add = function (_Symbol) {
-    Lexer._symbols[Lexer._index] = _Symbol;
-    Lexer._index++;
-}
-Lexer._buffer = new CharBuffer();
-Lexer._stringSection = new Boolean();
-Lexer._assignSection = new Boolean();
-Lexer._assignAhead = new Boolean();
-Lexer._dotSection = new Boolean();
-Lexer._singleDashFound = new Boolean();
-Lexer._commentSection = new Boolean();
+function Lexer() {
+    this._index = 0;
+    this._symbols = [];
+    this._buffer = new CharBuffer();
+    this._stringSection = new Boolean();
+    this._assignSection = new Boolean();
+    this._assignAhead = new Boolean();
+    this._dotSection = new Boolean();
+    this._singleDashFound = new Boolean();
+    this._commentSection = new Boolean();
+};
+
     /// <summary>
     /// Parses MIB file to symbol list.
     /// </summary>
     /// <param name="file">File</param>
     /// <param name="stream">File stream</param>
 Lexer.prototype.Parse = function (file) {
-    Lexer._assignAhead = false;
-    Lexer._assignSection = false;
-    Lexer._stringSection = false;
+    this._assignAhead = false;
+    this._assignSection = false;
+    this._stringSection = false;
     var lines = fs.readFileSync(file).toString().split('\n');
     var line;
     var i = 0;
@@ -220,17 +218,17 @@ Lexer.prototype.ParseLine = function (file, line, row) {
         }
 
         // IMPORTANT: comment does not span lines.
-        Lexer._commentSection = false;
-        Lexer._singleDashFound = false;
+        this._commentSection = false;
+        this._singleDashFound = false;
     }
 Lexer.prototype.ParseB = function(file, current, row, column){
             switch (current)
             {
                 case '\n':
-                    if (!Lexer._stringSection)
+                    if (!this._stringSection)
                     {
-                        Lexer._buffer.Fill(Lexer._symbols, file, row, column);
-                        Lexer._symbols.Add(this.CreateSpecialSymbol(file, current, row, column));
+                        this._buffer.Fill(this._symbols, file, row, column);
+                        this._symbols.push(this.CreateSpecialSymbol(file, current, row, column));
                         return false;
                     }
 
@@ -244,41 +242,41 @@ Lexer.prototype.ParseB = function(file, current, row, column){
                 case ';':
                 case ',':
                 case '|':
-                    if (Lexer._commentSection)
+                    if (this._commentSection)
                     {
                         break;
                     }
 
-                    if (!Lexer._stringSection)
+                    if (!this._stringSection)
                     {
-                        Lexer._buffer.Fill(Lexer._symbols, file, row, column);
-                        Lexer._symbols.Add(this.CreateSpecialSymbol(file, current, row, column));
+                        this._buffer.Fill(this._symbols, file, row, column);
+                        this._symbols.push(this.CreateSpecialSymbol(file, current, row, column));
                         return false;
                     }
 
                     break;
                 case '"':
-                    if (Lexer._commentSection)
+                    if (this._commentSection)
                     {
                         break;
                     }
 
-                    Lexer._stringSection = !Lexer._stringSection;
+                    this._stringSection = !this._stringSection;
                     break;
                 case '-':
-                    if (Lexer._stringSection)
+                    if (this._stringSection)
                     {
                         break;
                     }
 
-                    if (!Lexer._singleDashFound)
+                    if (!this._singleDashFound)
                     {
-                        Lexer._singleDashFound = true;
+                        this._singleDashFound = true;
                         break;
                     }
 
-                    Lexer._singleDashFound = false;
-                    Lexer._commentSection = !Lexer._commentSection;
+                    this._singleDashFound = false;
+                    this._commentSection = !this._commentSection;
                     break;
                 case '\r':
                     return false;
@@ -289,61 +287,61 @@ Lexer.prototype.ParseB = function(file, current, row, column){
                         return false;
                     }
 
-                    Lexer._singleDashFound = false;
-                    if (Char.IsWhiteSpace(current) && !Lexer._assignSection && !Lexer._stringSection && !Lexer._commentSection)
+                    this._singleDashFound = false;
+                    if (Char.IsWhiteSpace(current) && !this._assignSection && !this._stringSection && !this._commentSection)
                     {
-                        Lexer._buffer.Fill(Lexer._symbols, file, row, column);
+                        this._buffer.Fill(this._symbols, file, row, column);
                         return false;
                     }
 
-                    if (Lexer._commentSection)
+                    if (this._commentSection)
                     {
                         // TODO: ignore everything here in comment
                         break;
                     }
 
-                    if (Lexer._assignAhead)
+                    if (this._assignAhead)
                     {
-                        Lexer._assignAhead = false;
-                        Lexer._buffer.Fill(Lexer._symbols, file, row, column);
+                        this._assignAhead = false;
+                        this._buffer.Fill(this._symbols, file, row, column);
                         break;
                     }
 
-                    if (Lexer._dotSection && current != '.')
+                    if (this._dotSection && current != '.')
                     {
-                        Lexer._buffer.Fill(Lexer._symbols, file, row, column);
-                        Lexer._dotSection = false;
+                        this._buffer.Fill(this._symbols, file, row, column);
+                        this._dotSection = false;
                     }
 
-                    if (current == '.' && !Lexer._stringSection)
+                    if (current == '.' && !this._stringSection)
                     {
-                        if (!Lexer._dotSection)
+                        if (!this._dotSection)
                         {
-                            Lexer._buffer.Fill(Lexer._symbols, file, row, column);
-                            Lexer._dotSection = true;
+                            this._buffer.Fill(this._symbols, file, row, column);
+                            this._dotSection = true;
                         }
                     }
 
-                    if (current == ':' && !Lexer._stringSection)
+                    if (current == ':' && !this._stringSection)
                     {
-                        if (!Lexer._assignSection)
+                        if (!this._assignSection)
                         {
-                            Lexer._buffer.Fill(Lexer._symbols, file, row, column);
+                            this._buffer.Fill(this._symbols, file, row, column);
                         }
 
-                        Lexer._assignSection = true;
+                        this._assignSection = true;
                     }
 
-                    if (current == '=' && !Lexer._stringSection)
+                    if (current == '=' && !this._stringSection)
                     {
-                        Lexer._assignSection = false;
-                        Lexer._assignAhead = true;
+                        this._assignSection = false;
+                        this._assignAhead = true;
                     }
 
                     break;
             }
 
-            Lexer._buffer.Append(current);
+            this._buffer.Append(current);
             return false;
         }
 Lexer.prototype.CreateSpecialSymbol = function (file, value, row, column) {
@@ -389,15 +387,16 @@ Lexer.prototype.GetNextNonEOLSymbol = function () {
     var result;
     while ((result = this.GetNextSymbol()) == Symbol.EOL) {
     }
-    console.log(result);
+    //console.log(result);
     return result; //Symbol
 }
 Lexer.prototype.GetNextSymbol = function () {
-
-    while (Lexer._index < Lexer._symbols.Count) {
-        var next = Lexer._symbols[Lexer._index++];
-        if (next.IsComment()) {
-            continue;
+    //console.log(this._symbols.length);
+    while (this._index < this._symbols.length) {
+        var next = this._symbols[this._index];
+        console.log(next.IsComment());
+        if (!next.IsComment()) {
+            break;
         }
         return next; //Symbol
     }
@@ -409,18 +408,15 @@ Lexer.prototype.GetNextSymbol = function () {
 */
 function MibDocument(lexer){
     var temp;
+    this._modules = [];
     while ((temp = lexer.GetNextNonEOLSymbol()) != null)
     {
         //temp.ValidateIdentifier();
-        _modules.Add(new MibModule(temp.ToString(), lexer));                
+        this._modules.push(new MibModule(temp.ToString(), lexer));                
     }
 }
-MibDocument._modules = new Array();
-MibDocument._modules._index = 0;
-MibDocument._modules.Add = function (mibmodule) {
-    _symbols[MibDocument._modules._index] = _Symbol;
-    MibDocument._modules._index++;
-}
+
+
 
 /**
 * MibModule.cs
@@ -460,37 +456,21 @@ function MibModule(name, lexer){
             //ParseEntities(_tokens, temp, _name, lexer);
         }
 
-
+var dir = "..\\sharpsnmplib\\Tests\\Resources\\";
+var files = ['RFC1155-SMI.txt',
+             'RFC1157-SNMP.mib',
+             'RFC-1212.MIB.txt',
+             'RFC1213-MIB.MIB'];
 
 
 
     var lexer = new Lexer();
-    lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
-    console.log(lexer);
+    lexer.Parse(dir + files[0]);
+    //console.log(lexer);
     var doc = new MibDocument(lexer);
-    //lex.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
-    /*
-    lex.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/SNMPv2-SMI-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/SNMPv2-TC-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/SNMPv2-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/IANAifType-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/IF-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/HOST-RESOURCES-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/RFC1514-HOSTS.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/LMMIB2.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/BRIDGE-MIB.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/Printer-MIB.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/MSFT.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/CISCO-SMI-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/CISCO-PRODUCTS-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/CISCO-TC-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/CISCO-VTP-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/CISCO-STACK-MIB-V1SMI.MIB');
-    lex.Parse('RFC_BASE_MINIMUM/CISCO-CDP-MIB-V1SMI_edit.my');
-    */
-    console.log(Lexer._symbols);
+    //console.log(doc._modules.length);
+   
+    //console.log(Lexer._symbols);
 
 
 
