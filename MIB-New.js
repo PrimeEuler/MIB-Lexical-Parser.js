@@ -1,7 +1,4 @@
-
 var fs = require('fs');
-
-
 var Char = (function () {
     var _this = {
         IsControl: function (c) {
@@ -65,7 +62,6 @@ var Char = (function () {
     };
     return _this;
 })();
-
 /**
 * CharBuffer.cs 
 */
@@ -74,13 +70,11 @@ var CharBuffer = function () {
         _builder: "",
         Append: function (current) {
             this._builder += current;
-            
         },
         Fill: function (symbols, file, row, column) {
             if (this._builder.Length == 0) {
                 return;
             }
-
             var content = this._builder.toString();
             this._builder = "";
             this._builder.length = 0;
@@ -89,33 +83,37 @@ var CharBuffer = function () {
     }
     return _this;
 };
-
 /**
 * Symbol.cs 
 */
-function Symbol (file, text, row, column) {
-
+function Symbol(file, text, row, column) {
     this.file = file;
     this.text = text;
     this.row = row;
     this.column = column;
 };
 Symbol.prototype.Expect = function (expected) {
-    this.Assert(this == expected, expected + " expected");
+    this.Assert(this.text == expected.text, expected + " expected");
 }
 Symbol.prototype.Assert = function (condition, message) {
     if (condition) {
         return;
     }
+
 }
 Symbol.prototype.ToString = function () {
-    return this.text
+    return this.text;
 }
-Symbol.prototype.IsComment = function (symbol) {
-    return symbol != null && symbol.ToString().startsWith("--");
+Symbol.prototype.IsComment = function () {
+    var symbol = this;
+    return symbol != null && (symbol.ToString().indexOf("--") == 0);
+}
+Symbol.prototype.IsValidIdentifier = function () {
+    var symbol = this;
+    return Char.IsLetter(this.ToString().charAt(0))
 }
 
-Symbol.Definitions = new Symbol("","DEFINITIONS",-1,-1);
+
 Symbol.Definitions = new Symbol("", "DEFINITIONS", -1, -1);
 Symbol.Begin = new Symbol("", "BEGIN", -1, -1);
 Symbol.Object = new Symbol("", "OBJECT", -1, -1);
@@ -171,7 +169,6 @@ Symbol.Index = new Symbol("", "INDEX", -1, -1);
 Symbol.Augments = new Symbol("", "AUGMENTS", -1, -1);
 Symbol.DefVal = new Symbol("", "DEFVAL", -1, -1);
 Symbol.Of = new Symbol("", "OF", -1, -1);
-
 /**
 * Lexer.cs 
 */
@@ -185,13 +182,19 @@ function Lexer() {
     this._dotSection = new Boolean();
     this._singleDashFound = new Boolean();
     this._commentSection = new Boolean();
-};
 
-    /// <summary>
-    /// Parses MIB file to symbol list.
-    /// </summary>
-    /// <param name="file">File</param>
-    /// <param name="stream">File stream</param>
+    this._stringSection = false;
+    this._assignSection = false;
+    this._assignAhead = false;
+    this._dotSection = false;
+    this._singleDashFound = false;
+    this._commentSection = false;
+};
+/// <summary>
+/// Parses MIB file to symbol list.
+/// </summary>
+/// <param name="file">File</param>
+/// <param name="stream">File stream</param>
 Lexer.prototype.Parse = function (file) {
     this._assignAhead = false;
     this._assignSection = false;
@@ -200,219 +203,257 @@ Lexer.prototype.Parse = function (file) {
     var line;
     var i = 0;
     while ((line = lines[i]) != null && i <= lines.length) {
-        
         this.ParseLine(file, line, i);
         i++;
     }
 }
 Lexer.prototype.ParseLine = function (file, line, row) {
-        line = line + "\n";
-        //console.log(line);
-        for (var i = 0; i < line.length; i++) {
-            var current = line.charAt(i);
-            
-            var moveNext = this.ParseB(file, current, row, i); //bool
-            if (moveNext) {
-                break;
-            }
+    line = line + "\n";
+    for (var i = 0; i < line.length; i++) {
+        var current = line.charAt(i);
+        var moveNext = this.ParseB(file, current, row, i); //bool
+        if (moveNext) {
+            break;
         }
-
-        // IMPORTANT: comment does not span lines.
-        this._commentSection = false;
-        this._singleDashFound = false;
     }
-Lexer.prototype.ParseB = function(file, current, row, column){
-            switch (current)
-            {
-                case '\n':
-                    if (!this._stringSection)
-                    {
-                        this._buffer.Fill(this._symbols, file, row, column);
-                        this._symbols.push(this.CreateSpecialSymbol(file, current, row, column));
-                        return false;
-                    }
-
-                    break;
-                case '{':
-                case '}':
-                case '(':
-                case ')':
-                case '[':
-                case ']':
-                case ';':
-                case ',':
-                case '|':
-                    if (this._commentSection)
-                    {
-                        break;
-                    }
-
-                    if (!this._stringSection)
-                    {
-                        this._buffer.Fill(this._symbols, file, row, column);
-                        this._symbols.push(this.CreateSpecialSymbol(file, current, row, column));
-                        return false;
-                    }
-
-                    break;
-                case '"':
-                    if (this._commentSection)
-                    {
-                        break;
-                    }
-
-                    this._stringSection = !this._stringSection;
-                    break;
-                case '-':
-                    if (this._stringSection)
-                    {
-                        break;
-                    }
-
-                    if (!this._singleDashFound)
-                    {
-                        this._singleDashFound = true;
-                        break;
-                    }
-
-                    this._singleDashFound = false;
-                    this._commentSection = !this._commentSection;
-                    break;
-                case '\r':
-                    return false;
-                default:
-                    if (current == 0x1A)
-                    {
-                        // IMPORTANT: ignore invisible characters such as SUB.
-                        return false;
-                    }
-
-                    this._singleDashFound = false;
-                    if (Char.IsWhiteSpace(current) && !this._assignSection && !this._stringSection && !this._commentSection)
-                    {
-                        this._buffer.Fill(this._symbols, file, row, column);
-                        return false;
-                    }
-
-                    if (this._commentSection)
-                    {
-                        // TODO: ignore everything here in comment
-                        break;
-                    }
-
-                    if (this._assignAhead)
-                    {
-                        this._assignAhead = false;
-                        this._buffer.Fill(this._symbols, file, row, column);
-                        break;
-                    }
-
-                    if (this._dotSection && current != '.')
-                    {
-                        this._buffer.Fill(this._symbols, file, row, column);
-                        this._dotSection = false;
-                    }
-
-                    if (current == '.' && !this._stringSection)
-                    {
-                        if (!this._dotSection)
-                        {
-                            this._buffer.Fill(this._symbols, file, row, column);
-                            this._dotSection = true;
-                        }
-                    }
-
-                    if (current == ':' && !this._stringSection)
-                    {
-                        if (!this._assignSection)
-                        {
-                            this._buffer.Fill(this._symbols, file, row, column);
-                        }
-
-                        this._assignSection = true;
-                    }
-
-                    if (current == '=' && !this._stringSection)
-                    {
-                        this._assignSection = false;
-                        this._assignAhead = true;
-                    }
-
-                    break;
+    // IMPORTANT: comment does not span lines.
+    this._commentSection = false;
+    this._singleDashFound = false;
+}
+Lexer.prototype.ParseB = function (file, current, row, column) {
+    switch (current) {
+        case '\n':
+            if (!this._stringSection) {
+                this._buffer.Fill(this._symbols, file, row, column);
+                this._symbols.push(this.CreateSpecialSymbol(file, current, row, column));
+                return false;
+            }
+            break;
+        case '{':
+        case '}':
+        case '(':
+        case ')':
+        case '[':
+        case ']':
+        case ';':
+        case ',':
+        case '|':
+            if (this._commentSection) {
+                break;
+            }
+            if (!this._stringSection) {
+                this._buffer.Fill(this._symbols, file, row, column);
+                this._symbols.push(this.CreateSpecialSymbol(file, current, row, column));
+                return false;
+            }
+            break;
+        case '"':
+            if (this._commentSection) {
+                break;
+            }
+            this._stringSection = !this._stringSection;
+            break;
+        case '-':
+            if (this._stringSection) {
+                break;
             }
 
-            this._buffer.Append(current);
+            if (!this._singleDashFound) {
+                this._singleDashFound = true;
+                break;
+            }
+            this._singleDashFound = false;
+            this._commentSection = !this._commentSection;
+            break;
+        case '\r':
             return false;
-        }
+        default:
+            if (current == 0x1A) {
+                // IMPORTANT: ignore invisible characters such as SUB.
+                return false;
+            }
+            this._singleDashFound = false;
+            if (Char.IsWhiteSpace(current) && !this._assignSection && !this._stringSection && !this._commentSection) {
+                this._buffer.Fill(this._symbols, file, row, column);
+                return false;
+            }
+            if (this._commentSection) {
+                // TODO: ignore everything here in comment
+                break;
+            }
+            if (this._assignAhead) {
+                this._assignAhead = false;
+                this._buffer.Fill(this._symbols, file, row, column);
+                break;
+            }
+            if (this._dotSection && current != '.') {
+                this._buffer.Fill(this._symbols, file, row, column);
+                this._dotSection = false;
+            }
+            if (current == '.' && !this._stringSection) {
+                if (!this._dotSection) {
+                    this._buffer.Fill(this._symbols, file, row, column);
+                    this._dotSection = true;
+                }
+            }
+            if (current == ':' && !this._stringSection) {
+                if (!this._assignSection) {
+                    this._buffer.Fill(this._symbols, file, row, column);
+                }
+                this._assignSection = true;
+            }
+            if (current == '=' && !this._stringSection) {
+                this._assignSection = false;
+                this._assignAhead = true;
+            }
+            break;
+    }
+    //console.log(current);
+    this._buffer.Append(current);
+    return false;
+}
 Lexer.prototype.CreateSpecialSymbol = function (file, value, row, column) {
-        var str;
-        switch (value)
-        {
-            case '\n':
-                str = '\n';
-                break;
-            case '{':
-                str = "{";
-                break;
-            case '}':
-                str = "}";
-                break;
-            case '(':
-                str = "(";
-                break;
-            case ')':
-                str = ")";
-                break;
-            case '[':
-                str = "[";
-                break;
-            case ']':
-                str = "]";
-                break;
-            case ';':
-                str = ";";
-                break;
-            case ',':
-                str = ",";
-                break;
-            case '|':
-                str = "|";
-                break;
-            default:
-                throw new Error("value is not a special character");
-        }
-        return new Symbol(file, str, row, column);
+    var str;
+    switch (value) {
+        case '\n':
+            str = '\n';
+            break;
+        case '{':
+            str = "{";
+            break;
+        case '}':
+            str = "}";
+            break;
+        case '(':
+            str = "(";
+            break;
+        case ')':
+            str = ")";
+            break;
+        case '[':
+            str = "[";
+            break;
+        case ']':
+            str = "]";
+            break;
+        case ';':
+            str = ";";
+            break;
+        case ',':
+            str = ",";
+            break;
+        case '|':
+            str = "|";
+            break;
+        default:
+            throw new Error("value is not a special character");
+    }
+    return new Symbol(file, str, row, column);
 }
 Lexer.prototype.GetNextNonEOLSymbol = function () {
-    var result;
-    while ((result = this.GetNextSymbol()) == Symbol.EOL) {
+    var result = Symbol.EOL;
+
+    while ((result.text == Symbol.EOL.text)) {
+        result = this.GetNextSymbol();
+        
+        if (result == null) {
+            break;
+        }
     }
-    //console.log(result);
     return result; //Symbol
 }
 Lexer.prototype.GetNextSymbol = function () {
-    //console.log(this._symbols.length);
     while (this._index < this._symbols.length) {
-        var next = this._symbols[this._index];
-        console.log(next.IsComment());
-        if (!next.IsComment()) {
-            break;
+        var next = this._symbols[this._index++];
+
+        if (next.IsComment()) {
+            continue;
         }
-        return next; //Symbol
+        if (next.text != "") 
+        {
+            return next;
+        }
     }
     return null;
+}
+Lexer.prototype.ParseOidValue = function (parent, value) {
+    //parent = "";
+    //value = 0;
+    var previous = null;
+    var temp = this.GetNextNonEOLSymbol();
+    temp.Expect(Symbol.OpenBracket);
+    var longParent = "";
+    temp = this.GetNextNonEOLSymbol();
+    longParent += temp.text;
+    while ((temp = this.GetNextNonEOLSymbol()) != null) {
+
+        if (temp.text == Symbol.OpenParentheses.text) {
+            longParent += temp.text;
+            temp = this.GetNextNonEOLSymbol();
+            var succeed = new Boolean();
+            value = temp.ToString();
+            succeed = Char.IsDigit(value);
+            console.log(temp.ToString());
+            temp.Assert(succeed, "not a decimal");
+            longParent += temp.text;
+            temp = this.GetNextNonEOLSymbol();
+            temp.Expect(Symbol.CloseParentheses);
+            longParent += temp.text;
+            continue;
+        }
+
+        if (temp.text == Symbol.CloseBracket.text) {
+            parent = longParent;
+            return;
+        }
+
+        var succeeded = new Boolean();
+        value = temp.ToString();
+        succeeded = Char.IsDigit(value);
+        console.log(parent, value);
+        if (succeeded) {
+            // numerical way
+            while ((temp = this.GetNextNonEOLSymbol()).text != Symbol.CloseBracket.text) {
+                longParent += "." + temp.ToString();
+                value = temp.ToString();
+                succeeded = Char.IsDigit(value);
+                temp.Assert(succeeded, "not a decimal");
+            }
+            temp.Expect(Symbol.CloseBracket);
+            parent = longParent;
+
+            return;
+        }
+
+        longParent += ".";
+        longParent += temp.ToString();
+        temp = this.GetNextNonEOLSymbol();
+        temp.Expect(Symbol.OpenParentheses);
+        longParent += temp.ToString();
+        temp = this.GetNextNonEOLSymbol();
+        succeeded = Char.IsDigit(temp.ToString());
+        temp.Assert(succeeded, "not a decimal");
+        longParent += temp.ToString();
+        temp = this.GetNextNonEOLSymbol();
+        temp.Expect(Symbol.CloseParentheses);
+        longParent += temp.ToString();
+        previous = temp;
+        
+    }
+
+    //throw MibException.Create("end of file reached", previous);
 }
 
 /**
 * MibDocument.cs
 */
-function MibDocument(lexer){
+function MibDocument(lexer) {
     var temp;
     this._modules = [];
-    while ((temp = lexer.GetNextNonEOLSymbol()) != null)
-    {
-        //temp.ValidateIdentifier();
-        this._modules.push(new MibModule(temp.ToString(), lexer));                
+    while ((temp = lexer.GetNextNonEOLSymbol()) != null) {
+        if (temp.IsValidIdentifier()) {
+            this._modules.push(new MibModule(temp.ToString(), lexer));
+        }
     }
 }
 
@@ -422,55 +463,183 @@ function MibDocument(lexer){
 * MibModule.cs
 */
 function MibModule(name, lexer){
-            if (name == null)
-            {
-                throw new Error("name");
-            }
-            
-            if (lexer == null)
-            {
-                throw new Error("lexer");
-            }
-            
-            _name = name.toUpperCase(); // all module name are uppercase.
-            var temp = lexer.GetNextNonEOLSymbol();
-            temp.Expect(Symbol.Definitions);
-            temp = lexer.GetNextNonEOLSymbol();
-            temp.Expect(Symbol.Assign);
-            temp = lexer.GetNextSymbol();
-            temp.Expect(Symbol.Begin);
-            temp = lexer.GetNextNonEOLSymbol();
-            if (temp == Symbol.Imports)
-            {
-                //_imports = ParseDependents(lexer);
-            }
-            else if (temp == Symbol.Exports)
-            {
-                //_exports = ParseExports(lexer);
-            }
-            else if (temp == Symbol.End)
-            {
-                return;
-            }
+    this._name = "";
+    this._imports = "";
+    this._exports = "";
+    this._tokens = [];
 
-            //ParseEntities(_tokens, temp, _name, lexer);
+    this._name = name.toUpperCase(); // all module name are uppercase.
+    var temp = lexer.GetNextNonEOLSymbol();
+    console.log(temp.text + " = " + Symbol.Definitions.text);
+    temp.Expect(Symbol.Definitions);
+
+    temp = lexer.GetNextNonEOLSymbol();
+    console.log(temp.text + " = " + Symbol.Assign.text);
+    temp.Expect(Symbol.Assign);
+
+    temp = lexer.GetNextSymbol();
+    console.log(temp.text + " = " + Symbol.Begin.text);
+    temp.Expect(Symbol.Begin);
+
+
+    temp = lexer.GetNextNonEOLSymbol();
+    console.log(temp.text);
+    if (temp.text == Symbol.Imports.text) {
+        //_imports = ParseDependents(lexer);
+    }
+    else if (temp.text == Symbol.Exports.text) {
+        //_exports = ParseExports(lexer);
+    }
+    else if (temp.text == Symbol.End.text) {
+        return;
+    }
+    this.ParseEntities(this._tokens, temp, this._name, lexer);
+}
+MibModule.prototype.ParseEntities = function (tokens, last, module, lexer) {
+    var temp = last;
+    var buffer = [];
+    do {
+        if (temp.text == Symbol.Imports.text || temp.text == Symbol.Exports.text || temp.text == Symbol.EOL.text) {
+            continue;
         }
+        buffer.push(temp);
+        if (temp.text != Symbol.Assign.text) {
+            continue;
+        } 
+        this.ParseEntity(tokens, module, buffer, lexer);
+        buffer = [];
+    }
+    while (((temp = lexer.GetNextSymbol()).text != Symbol.End.text));
+}
+MibModule.prototype.ParseEntity = function (tokens, module, buffer, lexer) {
+    //buffer[0].Assert(buffer.Count > 1, "unexpected symbol");
+    //if (buffer[0].IsValidIdentifier()) 
+    {
+        //console.log(buffer[1].text);
+        if (buffer.length == 2) {
+            // others
+            //tokens.Add(ParseOthers(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.Object.text) {
+            // object identifier
+            tokens.push(this.ParseObjectIdentifier(module, buffer, lexer));
+            //console.log('ParseObjectIdentifier');
+        }
+        else if (buffer[1].text == Symbol.ModuleIdentity.text) {
+            // module identity
+            //tokens.Add(new ModuleIdentity(module, buffer, lexer));
+            //console.log('module identity');
+        }
+        else if (buffer[1].text == Symbol.ObjectType.text) {
+            console.log('object type');
+            tokens.push(new ObjectType(module, buffer, lexer));
+            
+        }
+        else if (buffer[1].text == Symbol.ObjectGroup.text) {
+            //tokens.Add(new ObjectGroup(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.NotificationGroup.text) {
+            //tokens.Add(new NotificationGroup(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.ModuleCompliance.text) {
+            //tokens.Add(new ModuleCompliance(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.NotificationType.text) {
+            //tokens.Add(new NotificationType(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.ObjectIdentity.text) {
+            //tokens.Add(new ObjectIdentity(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.Macro.text) {
+            //tokens.Add(new Macro(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.TrapType.text) {
+            //tokens.Add(new TrapType(module, buffer, lexer));
+        }
+        else if (buffer[1].text == Symbol.AgentCapabilities.text) {
+            //tokens.Add(new AgentCapabilities(module, buffer, lexer));
+        }
+    }
+}
+MibModule.prototype.ParseObjectIdentifier = function (module, header, lexer) {
+    header[0].Assert(header.length == 4, "invalid OID value assignment");
+    header[2].Expect(Symbol.Identifier);
+    return new OidValueAssignment(module, header[0].ToString(), lexer);
+}
 
-var dir = "..\\sharpsnmplib\\Tests\\Resources\\";
-var files = ['RFC1155-SMI.txt',
-             'RFC1157-SNMP.mib',
-             'RFC-1212.MIB.txt',
-             'RFC1213-MIB.MIB'];
 
+/**
+* OidValueAssignment.cs
+*/
+function OidValueAssignment(module, name, lexer) {
+    this._module = module;
+    this._name = name;
+    this._parent="";
+    this._value="";
+    lexer.ParseOidValue(this._parent, this._value);
+    console.log(this);
+}  
+
+
+/**
+* ObjectType.cs
+*/
+function ObjectType(module, header, lexer) {
+        this._module=module;
+        this._parent;
+        this._value;
+        this._name=header[0].ToString();
+        this._syntax;
+        this._units;
+        this._access;
+        this._status;
+        this._description;
+        this._reference;
+        this._indices;
+        this._augment;
+        this._defVal;
+
+            this.ParseProperties(header);
+            lexer.ParseOidValue(this._parent, this._value);
+            console.log(this._parent, this._value);
+
+}
+ObjectType.prototype.ParseProperties = function (header) {
+
+}
 
 
     var lexer = new Lexer();
-    lexer.Parse(dir + files[0]);
+    lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
+    lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
+    //lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
+    //lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
     //console.log(lexer);
     var doc = new MibDocument(lexer);
-    //console.log(doc._modules.length);
-   
-    //console.log(Lexer._symbols);
+
+    //lex.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
+    /*
+    lex.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/SNMPv2-SMI-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/SNMPv2-TC-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/SNMPv2-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/IANAifType-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/IF-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/HOST-RESOURCES-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/RFC1514-HOSTS.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/LMMIB2.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/BRIDGE-MIB.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/Printer-MIB.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/MSFT.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/CISCO-SMI-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/CISCO-PRODUCTS-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/CISCO-TC-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/CISCO-VTP-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/CISCO-STACK-MIB-V1SMI.MIB');
+    lex.Parse('RFC_BASE_MINIMUM/CISCO-CDP-MIB-V1SMI_edit.my');
+    */
+    //console.log(doc._modules);
 
 
 
