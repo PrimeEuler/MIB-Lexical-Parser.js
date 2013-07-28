@@ -468,27 +468,27 @@ function MibModule(name, lexer){
     this._exports = "";
     this._tokens = [];
 
-    this._name = name.toUpperCase(); // all module name are uppercase.
+    this._name = name.toUpperCase(); // all module names are uppercase.
     var temp = lexer.GetNextNonEOLSymbol();
-    console.log(temp.text + " = " + Symbol.Definitions.text);
+    console.log(temp.text + " |||| " + Symbol.Definitions.text);
     temp.Expect(Symbol.Definitions);
 
     temp = lexer.GetNextNonEOLSymbol();
-    console.log(temp.text + " = " + Symbol.Assign.text);
+    console.log(temp.text + " |||| " + Symbol.Assign.text);
     temp.Expect(Symbol.Assign);
 
     temp = lexer.GetNextSymbol();
-    console.log(temp.text + " = " + Symbol.Begin.text);
+    console.log(temp.text + " |||| " + Symbol.Begin.text);
     temp.Expect(Symbol.Begin);
 
 
     temp = lexer.GetNextNonEOLSymbol();
-    console.log(temp.text);
+    console.log(temp.text + " |||| ");
     if (temp.text == Symbol.Imports.text) {
-        //_imports = ParseDependents(lexer);
+        this._imports = this.ParseDependents(lexer);
     }
     else if (temp.text == Symbol.Exports.text) {
-        //_exports = ParseExports(lexer);
+        this._exports = this.ParseExports(lexer);
     }
     else if (temp.text == Symbol.End.text) {
         return;
@@ -514,11 +514,12 @@ MibModule.prototype.ParseEntities = function (tokens, last, module, lexer) {
 MibModule.prototype.ParseEntity = function (tokens, module, buffer, lexer) {
     //buffer[0].Assert(buffer.Count > 1, "unexpected symbol");
     //if (buffer[0].IsValidIdentifier()) 
+    //console.log("--------------" + buffer);
     {
         //console.log(buffer[1].text);
         if (buffer.length == 2) {
             // others
-            //tokens.Add(ParseOthers(module, buffer, lexer));
+            tokens.push(this.ParseOthers(module, buffer, lexer));
         }
         else if (buffer[1].text == Symbol.Object.text) {
             // object identifier
@@ -531,7 +532,7 @@ MibModule.prototype.ParseEntity = function (tokens, module, buffer, lexer) {
             //console.log('module identity');
         }
         else if (buffer[1].text == Symbol.ObjectType.text) {
-            console.log('object type');
+            //console.log('object type');
             tokens.push(new ObjectType(module, buffer, lexer));
             
         }
@@ -551,7 +552,7 @@ MibModule.prototype.ParseEntity = function (tokens, module, buffer, lexer) {
             //tokens.Add(new ObjectIdentity(module, buffer, lexer));
         }
         else if (buffer[1].text == Symbol.Macro.text) {
-            //tokens.Add(new Macro(module, buffer, lexer));
+            tokens.push(new Macro(module, buffer, lexer));
         }
         else if (buffer[1].text == Symbol.TrapType.text) {
             //tokens.Add(new TrapType(module, buffer, lexer));
@@ -566,7 +567,101 @@ MibModule.prototype.ParseObjectIdentifier = function (module, header, lexer) {
     header[2].Expect(Symbol.Identifier);
     return new OidValueAssignment(module, header[0].ToString(), lexer);
 }
+MibModule.prototype.ParseDependents = function(lexer)
+{
+            return new Imports(lexer);
+}
+MibModule.prototype.ParseOthers = function(module, header, lexer){
+    var current = lexer.GetNextNonEOLSymbol();
+    if (current.text == Symbol.Sequence.text)
+    {
+        //return new Sequence(module, header[0].ToString(), lexer);
+    }
 
+    if (current.text == Symbol.Choice.text)
+    {
+        return new Choice(module, header[0].ToString(), lexer);
+    }
+
+    if (current.text == Symbol.Integer.text)
+    {
+        //return new IntegerType(module, header[0].ToString(), lexer);
+    }
+
+    if (current.text == Symbol.TextualConvention.text)
+    {
+        //return new TextualConvention(module, header[0].ToString(), lexer);
+    }
+
+    //return new TypeAssignment(module, header[0].ToString(), current, lexer);
+}
+MibModule.prototype.ParseExports = function (lexer) {
+    return new Exports(lexer);
+}
+/**
+* Imports.cs
+*/
+function Imports(lexer) {
+    this._dependents = [];
+    var temp;
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.Semicolon.text) {
+        if (temp.text == Symbol.EOL.text) {
+            continue;
+        }
+       
+        this._dependents.push(new ImportsFrom(temp, lexer).Module());
+    }
+}
+/**
+* ImportsFrom.cs
+*/
+function ImportsFrom(last, lexer) {
+    this._module="";
+    this._types = [];
+    var previous = last;
+    var temp;
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.From.text)
+    {
+        if (temp.text == Symbol.EOL.text) 
+        {
+            continue;
+        }
+                
+        if (temp.text == Symbol.Comma.text)
+        {
+            //previous.ValidateIdentifier();
+            console.log(revious.ToString());
+            this._types.push(previous.ToString());
+        }
+                
+        previous = temp;
+    }
+            
+    this._module = lexer.GetNextSymbol().ToString().toUpperCase(); // module names are uppercase
+}
+ImportsFrom.prototype.Module = function () {
+    return this._module;
+}
+/**
+* Exports.cs
+*/
+function Exports(lexer) {
+    this._types = [];
+    var previous = null;
+    var temp;
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.Semicolon.text) {
+        if (temp.text == Symbol.EOL.text) {
+            continue;
+        }
+
+        if (temp.text == Symbol.Comma.text && previous.text != null) {
+            //previous.ValidateIdentifier();
+            this._types.push(previous.ToString());
+        }
+
+        previous = temp;
+    }
+}
 
 /**
 * OidValueAssignment.cs
@@ -577,7 +672,6 @@ function OidValueAssignment(module, name, lexer) {
     this._parent="";
     this._value="";
     lexer.ParseOidValue(this._parent, this._value);
-    console.log(this);
 }  
 
 
@@ -609,13 +703,64 @@ ObjectType.prototype.ParseProperties = function (header) {
 }
 
 
-    var lexer = new Lexer();
-    lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
+/**
+* Macro.cs
+*/
+function Macro(module, header, lexer){
+    this._name = header[0].ToString();
+    var temp;
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.Begin.text)
+    {                
+    }
+            
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.End.text)
+    {
+    }
+}
+Macro.prototype.Name - function(){
+    return this._name; 
+}
+
+/**
+* Choice.cs
+*/
+function Choice(module, name, lexer){
+    this._name = name;
+
+    var temp;
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.OpenBracket.text)
+    {
+    }
+            
+    while ((temp = lexer.GetNextSymbol()).text != Symbol.CloseBracket.text)
+    {
+    }
+}
+
+
+
+
+var lexer = new Lexer();
     lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
+    lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
+//Parse->Parseline->ParseB(fill buffer, create symbols)->
+
+    //lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
     //lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
     //lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
     //console.log(lexer);
     var doc = new MibDocument(lexer);
+    for (var i = 0; i < doc._modules.length; i++) {
+        console.log(doc._modules[i]);
+    }
+/// <summary>
+/// Lexer parses MIB file into Symbol list.
+/// Create MibDocument from Lexer.
+/// Create MibModules (name, imports, exports, tokens) from Symbol list.
+/// 
+/// </summary>
+
+
 
     //lex.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
     /*
