@@ -1,3 +1,12 @@
+/// <summary>
+/// Lexer parses MIB file into Symbol list.
+/// Create MibDocument from Lexer.
+/// MibDocument creates MibModule (name, imports, exports, tokens) array from Lexer Symbol list.
+/// tokens contain: 
+/// -OID values and are used to:
+/// --SNMP Query network devices for MIB information
+/// --SNMP Trap network device MIB notifications
+/// </summary>
 var fs = require('fs');
 var Char = (function () {
     var _this = {
@@ -112,8 +121,6 @@ Symbol.prototype.IsValidIdentifier = function () {
     var symbol = this;
     return Char.IsLetter(this.ToString().charAt(0))
 }
-
-
 Symbol.Definitions = new Symbol("", "DEFINITIONS", -1, -1);
 Symbol.Begin = new Symbol("", "BEGIN", -1, -1);
 Symbol.Object = new Symbol("", "OBJECT", -1, -1);
@@ -376,9 +383,9 @@ Lexer.prototype.GetNextSymbol = function () {
     }
     return null;
 }
-Lexer.prototype.ParseOidValue = function (parent, value) {
-    //parent = "";
-    //value = 0;
+Lexer.prototype.ParseOidValue = function (OidValueAssignment) {
+    var parent = "";
+    var value = 0;
     var previous = null;
     var temp = this.GetNextNonEOLSymbol();
     temp.Expect(Symbol.OpenBracket);
@@ -393,7 +400,7 @@ Lexer.prototype.ParseOidValue = function (parent, value) {
             var succeed = new Boolean();
             value = temp.ToString();
             succeed = Char.IsDigit(value);
-            console.log(temp.ToString());
+            OidValueAssignment._value = value;///////////////////
             temp.Assert(succeed, "not a decimal");
             longParent += temp.text;
             temp = this.GetNextNonEOLSymbol();
@@ -404,13 +411,17 @@ Lexer.prototype.ParseOidValue = function (parent, value) {
 
         if (temp.text == Symbol.CloseBracket.text) {
             parent = longParent;
+            OidValueAssignment._parent = parent;///////////////////
+            OidValueAssignment._value = value;////////////////////
             return;
         }
 
         var succeeded = new Boolean();
         value = temp.ToString();
         succeeded = Char.IsDigit(value);
-        console.log(parent, value);
+        //console.log("^^^^^^^^^^^^^",parent, value);
+        OidValueAssignment._parent = parent;
+        OidValueAssignment._value = value;
         if (succeeded) {
             // numerical way
             while ((temp = this.GetNextNonEOLSymbol()).text != Symbol.CloseBracket.text) {
@@ -421,7 +432,8 @@ Lexer.prototype.ParseOidValue = function (parent, value) {
             }
             temp.Expect(Symbol.CloseBracket);
             parent = longParent;
-
+            OidValueAssignment._parent = parent;///////////////
+            OidValueAssignment._value = value;////////////////
             return;
         }
 
@@ -671,7 +683,7 @@ function OidValueAssignment(module, name, lexer) {
     this._name = name;
     this._parent="";
     this._value="";
-    lexer.ParseOidValue(this._parent, this._value);
+    lexer.ParseOidValue(this);
 }  
 
 
@@ -756,8 +768,10 @@ var lexer = new Lexer();
 /// <summary>
 /// Lexer parses MIB file into Symbol list.
 /// Create MibDocument from Lexer.
-/// Create MibModules (name, imports, exports, tokens) from Symbol list.
-/// 
+/// MibDocument creates MibModule (name, imports, exports, tokens) array from Lexer Symbol list.
+/// tokens contain OID values and are used to:
+/// -SNMP Query network devices for MIB information
+/// -SNMP Trap network device MIB notifications
 /// </summary>
 
 
