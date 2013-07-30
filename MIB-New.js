@@ -1,5 +1,6 @@
 /// <summary>
 ///http://tools.ietf.org/html/rfc2578
+///http://cpansearch.perl.org/src/FTASSIN/SNMP-MIB-Compiler-0.04/lib/SNMP/MIB/Compiler.pm
 /// Lexer parses MIB file into Symbol list.
 /// Create MibDocument from Lexer.
 /// MibDocument creates MibModule (name, imports, exports, tokens) array from Lexer Symbol list.
