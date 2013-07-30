@@ -1,4 +1,5 @@
 /// <summary>
+///http://tools.ietf.org/html/rfc2578
 /// Lexer parses MIB file into Symbol list.
 /// Create MibDocument from Lexer.
 /// MibDocument creates MibModule (name, imports, exports, tokens) array from Lexer Symbol list.
