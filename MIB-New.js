@@ -521,11 +521,12 @@ MibModule.prototype.ParseEntities = function (tokens, last, module, lexer) {
         if (temp.text == Symbol.Imports.text || temp.text == Symbol.Exports.text || temp.text == Symbol.EOL.text) {
             continue;
         }
-        buffer.push(temp);
+        buffer.push(temp);//Fill buffer with Imports and Exports
         if (temp.text != Symbol.Assign.text) {
             continue;
         }
-        this.ParseEntity(tokens, module, buffer, lexer);
+        console.log("\n^^^^^^^^^^^^^^^^^^^  ASSIGN " + temp.text + " BUFFER.LENGTH =" + buffer.length + "  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+        this.ParseEntity(tokens, module, buffer, lexer);//If "Assign" Parse the buffer into tokens
         buffer = [];
     }
     while (((temp = lexer.GetNextSymbol()).text != Symbol.End.text));
@@ -535,45 +536,58 @@ MibModule.prototype.ParseEntity = function (tokens, module, buffer, lexer) {
     //if (buffer[0].IsValidIdentifier()) 
     //console.log("--------------" + buffer);
     {
-        console.log("---------------------------------------------\n", buffer );
-        if (buffer.length == 2) {
+        console.log("___________________________BUFFER_____________________________\n", buffer);
+        if (buffer[1].text == Symbol.Assign.text) {
             tokens.push(this.ParseOthers(module, buffer, lexer));
-            console.log("\nParseEntity.tokens.push(ParseOthers)\n", tokens[tokens.length - 1]);
+            console.log("\n####################### TOKEN = " + buffer[0].text + " #######################\n", tokens[tokens.length - 1]);
+        }
+        else if (buffer.length == 2) {
+            tokens.push(this.ParseOthers(module, buffer, lexer));
+            console.log("\n####################### TOKEN => " + buffer[1].text + " #######################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.Object.text) {
             tokens.push(this.ParseObjectIdentifier(module, buffer, lexer));
-            console.log("\nParseEntity.tokens.push(ParseObjectIdentifier)\n", tokens[tokens.length - 1]);
+            console.log("\n############### TOKEN = OBJECT IDENTIFIER #####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.ModuleIdentity.text) {
             tokens.push(new ModuleIdentity(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.ModuleIdentity.text +  "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.ObjectType.text) {
             tokens.push(new ObjectType(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.ObjectType.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.ObjectGroup.text) {
             tokens.push(new ObjectGroup(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.ObjectGroup.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.NotificationGroup.text) {
             tokens.push(new NotificationGroup(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.NotificationGroup.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.ModuleCompliance.text) {
             tokens.push(new ModuleCompliance(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.ModuleCompliance.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.NotificationType.text) {
             tokens.push(new NotificationType(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.NotificationType.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.ObjectIdentity.text) {
             tokens.push(new ObjectIdentity(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.ObjectIdentity.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.Macro.text) {
             tokens.push(new Macro(module, buffer, lexer));
-            console.log("\nParseEntity.tokens.push(Macro)\n", tokens[tokens.length - 1]);
+            console.log("\n############### TOKEN = " + Symbol.Macro.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.TrapType.text) {
             tokens.push(new TrapType(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.TrapType.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.AgentCapabilities.text) {
             tokens.push(new AgentCapabilities(module, buffer, lexer));
+            console.log("\n############### TOKEN = " + Symbol.AgentCapabilities.text + "#####################\n", tokens[tokens.length - 1]);
         }
     }
 }
@@ -681,7 +695,6 @@ function OidValueAssignment(module, name, lexer) {
     this._value = "";
     lexer.ParseOidValue(this);
 }
-
 
 /**
 * ObjectType.cs
@@ -987,9 +1000,17 @@ function TextualConvention(module, name, lexer){
      this.Value = last.ToString();
      var previous = last; 
      var veryPrevious = previous;
-     console.log(temp.text);
      while ((temp = lexer.CheckNextSymbol()) != null) {
-     //while (temp != null) {
+         if (temp.text == "IDENTIFIER") {
+             this.Value += " " + temp.text;
+             temp = lexer.GetNextSymbol();
+             return
+         }
+         if (temp.text == "]" && previous.text=="APPLICATION") {
+             this.Value += " " + "APPLICATION";
+             temp = lexer.GetNextSymbol();
+             return
+         }
          if (veryPrevious.text == Symbol.EOL.text && previous.text == Symbol.EOL.text && temp.IsValidIdentifier()) {
              
              return;
