@@ -1,6 +1,7 @@
 /// <summary>
 ///http://tools.ietf.org/html/rfc2578
 ///http://cpansearch.perl.org/src/FTASSIN/SNMP-MIB-Compiler-0.04/lib/SNMP/MIB/Compiler.pm
+///http://www.rfc-editor.org/rfc/pdfrfc/rfc1442.txt.pdf
 /// Lexer parses MIB file into Symbol list.
 /// Create MibDocument from Lexer.
 /// MibDocument creates MibModule (name, imports, exports, tokens) array from Lexer Symbol list.
@@ -1048,6 +1049,7 @@ var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
 console.log(lexer._symbols.length);
+///Variable ::= Value
 var Buffer = [];
 var Value = [];
 var Variable = [];
@@ -1057,40 +1059,51 @@ var Assign_Index = 0;
 var Buffer_Index = 0;
 var temp=lexer.CheckNextSymbol();
 while (temp != null) {
-    if (temp.text == Symbol.EOL.text) {
+    if (temp.text == Symbol.EOL.text) {                     ///   EOL (End of Line)
         EOL_Index = Buffer_Index;
     }
-    else if (temp.text == Symbol.Assign.text) {
+    else if (temp.text == Symbol.Assign.text) {             ///   ::= Assingment
         Assign_Index = Buffer_Index;
 
-        for (var i = 0; i < Variable.length; i++) {
-            if (Variable[i] != null) {
-                CharString += " " + Variable[i].text;
+        Buffer_Index++;
+        Buffer.push(temp);
+                                                            /// We key off of Assign but the the Symbol comes after the Variable
+        for (var i = 0; i < Variable.length; i++) {         /// So we must store the Variables EOL to Assign
+            if (Variable[i] != null) {                      
+                CharString += " " + Variable[i].text;       /// Assemble all Variables into String 
             }
         }
 
-        Variable = [];
-        for (var i = EOL_Index; i <= Assign_Index; i++) {
+        Variable = [];                                      /// Init Variable buffer
+        for (var i = EOL_Index; i <= Assign_Index; i++) {   /// Assemble all Variables from Buffer(EOL<-----Variables----->Assign)
             Variable[i] = Buffer[i];
         }
-        Value = [];
-        for (var i = 0; i < EOL_Index; i++) {
+        Value = [];                                         /// Init Value buffer             
+        for (var i = 0; i < EOL_Index; i++) {               /// Assemble all Value from Buffer(0<-----Values----->EOL)
             Value[i] = Buffer[i];
         }
 
-        for (var i = 0; i < Value.length; i++) {
+        for (var i = 0; i < Value.length; i++) {           /// Assemble all Values into String 
             CharString += " " + Value[i].text;
         }
 
 
-        Buffer = [];
-        Buffer_Index = 0;
-        console.log(CharString);
-        CharString = "";
+        Buffer = [];                                       /// Init Buffer
+        Buffer_Index = 0;                                  /// Init Buffer_Index
+        console.log("_____" + CharString);                 /// log Variable ::= Value
+        CharString = "";                                   /// Reset CharString
+    }
+    else if (temp.text == Symbol.Begin.text || temp.text == Symbol.End.text) {
+        Buffer_Index++;
+        Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
+        Buffer_Index++;
+        Buffer.push(temp);
+        Buffer_Index++;
+        Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
     }
     else {
-            Buffer_Index++;
-            Buffer.push(temp);
+        Buffer_Index++;
+        Buffer.push(temp);
     }
     temp = lexer.GetNextSymbol();
 };
