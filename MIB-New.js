@@ -523,12 +523,12 @@ MibModule.prototype.ParseEntities = function (tokens, last, module, lexer) {
         if (temp.text == Symbol.Imports.text || temp.text == Symbol.Exports.text || temp.text == Symbol.EOL.text) {
             continue;
         }
-        buffer.push(temp);//Fill buffer with Imports and Exports
+        buffer.push(temp); //Fill buffer with Imports and Exports
         if (temp.text != Symbol.Assign.text) {
             continue;
         }
         console.log("\n^^^^^^^^^^^^^^^^^^^  ASSIGN " + temp.text + " BUFFER.LENGTH =" + buffer.length + "  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
-        this.ParseEntity(tokens, module, buffer, lexer);//If "Assign" Parse the buffer into tokens
+        this.ParseEntity(tokens, module, buffer, lexer); //If "Assign" Parse the buffer into tokens
         buffer = [];
     }
     while (((temp = lexer.GetNextSymbol()).text != Symbol.End.text));
@@ -553,7 +553,7 @@ MibModule.prototype.ParseEntity = function (tokens, module, buffer, lexer) {
         }
         else if (buffer[1].text == Symbol.ModuleIdentity.text) {
             tokens.push(new ModuleIdentity(module, buffer, lexer));
-            console.log("\n############### TOKEN = " + Symbol.ModuleIdentity.text +  "#####################\n", tokens[tokens.length - 1]);
+            console.log("\n############### TOKEN = " + Symbol.ModuleIdentity.text + "#####################\n", tokens[tokens.length - 1]);
         }
         else if (buffer[1].text == Symbol.ObjectType.text) {
             tokens.push(new ObjectType(module, buffer, lexer));
@@ -703,11 +703,12 @@ function OidValueAssignment(module, name, lexer) {
 * TODO-ParseSyntax,ParseUnits,ParseAccess,ParseStatus,ParseDescription,ParseReference,ParseIndices,ParseAugments,ParseDefVal
 */
 function ObjectType(module, header, lexer) {
+    this._type = "ObjectType";
     this._module = module;
-    this._parent="";
-    this._value=0;
+    this._parent = "";
+    this._value = 0;
     this._name = header[0].ToString();
-    this._syntax="";
+    this._syntax = "";
     this._units = "";
     this._access = "";
     this._status = "";
@@ -716,28 +717,29 @@ function ObjectType(module, header, lexer) {
     this._indices = "";
     this._augment = "";
     this._defVal = "";
-    this.ParseProperties(header);//group of symbols = header
+    this.ParseProperties(header); //group of symbols = header
     lexer.ParseOidValue(this);
-    
+
 
 }
 ObjectType.prototype.ParseProperties = function (header) {
 
-            this._syntax = "ParseSyntax"; //ParseSyntax(_module, _name, enumerator, ref temp);
-            this._units = "ParseUnits"; //ParseUnits(enumerator, ref temp);
-            this._access = "ParseAccess"; //ParseAccess(enumerator, ref temp);
-            this._status = "ParseStatus"; //ParseStatus(enumerator, ref temp);
-            this._description = "ParseDescription"; //ParseDescription(enumerator, ref temp);
-            this._reference = "ParseReference"; //ParseReference(enumerator, ref temp);
-            this._indices = "ParseIndices"; //ParseIndices(enumerator, ref temp);
-            this._augment = "ParseAugments"; //ParseAugments(enumerator, ref temp);
-            this._defVal = "ParseDefVal"; //ParseDefVal(enumerator, ref temp);
+    this._syntax = "ParseSyntax"; //ParseSyntax(_module, _name, enumerator, ref temp);
+    this._units = "ParseUnits"; //ParseUnits(enumerator, ref temp);
+    this._access = "ParseAccess"; //ParseAccess(enumerator, ref temp);
+    this._status = "ParseStatus"; //ParseStatus(enumerator, ref temp);
+    this._description = "ParseDescription"; //ParseDescription(enumerator, ref temp);
+    this._reference = "ParseReference"; //ParseReference(enumerator, ref temp);
+    this._indices = "ParseIndices"; //ParseIndices(enumerator, ref temp);
+    this._augment = "ParseAugments"; //ParseAugments(enumerator, ref temp);
+    this._defVal = "ParseDefVal"; //ParseDefVal(enumerator, ref temp);
 
 }
 /**
 * ModuleIdentity.cs
 */
 function ModuleIdentity(module, header, lexer) {
+    this._type = "ModuleIdentity";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -748,6 +750,7 @@ function ModuleIdentity(module, header, lexer) {
 * ObjectGroup.cs
 */
 function ObjectGroup(module, header, lexer) {
+    this._type = "ObjectGroup";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -758,6 +761,7 @@ function ObjectGroup(module, header, lexer) {
 * ObjectIdentity.cs
 */
 function ObjectIdentity(module, header, lexer) {
+    this._type = "ObjectIdentity";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -771,6 +775,7 @@ function ObjectIdentity(module, header, lexer) {
 * NotificationGroup.cs
 */
 function NotificationGroup(module, header, lexer) {
+    this._type = "NotificationGroup";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -781,6 +786,7 @@ function NotificationGroup(module, header, lexer) {
 * ModuleCompliance.cs
 */
 function ModuleCompliance(module, header, lexer) {
+    this._type = "ModuleCompliance";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -791,6 +797,7 @@ function ModuleCompliance(module, header, lexer) {
 * NotificationType.cs
 */
 function NotificationType(module, header, lexer) {
+    this._type = "NotificationType";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -801,6 +808,7 @@ function NotificationType(module, header, lexer) {
 * TrapType.cs
 */
 function TrapType(module, header, lexer) {
+    this._type = "TrapType";
     this._module = module;
     this._name = header[0].ToString();
     var temp;
@@ -815,6 +823,7 @@ function TrapType(module, header, lexer) {
 * AgentCapabilities.cs
 */
 function AgentCapabilities(module, header, lexer) {
+    this._type = "AgentCapabilities";
     this._module = module;
     this._name = header[0].ToString();
     this._parent = "";
@@ -825,7 +834,9 @@ function AgentCapabilities(module, header, lexer) {
 * Macro.cs
 */
 function Macro(module, header, lexer) {
+    this._type = "Macro";
     this._name = header[0].ToString();
+    this._module = module;
     var temp;
     while ((temp = lexer.GetNextSymbol()).text != Symbol.Begin.text) {
     }
@@ -837,8 +848,9 @@ function Macro(module, header, lexer) {
 * Choice.cs
 */
 function Choice(module, name, lexer) {
+    this._type = "Choice";
     this._name = name;
-
+    this._module = module;
     var temp;
     while ((temp = lexer.GetNextSymbol()).text != Symbol.OpenBracket.text) {
     }
@@ -850,7 +862,9 @@ function Choice(module, name, lexer) {
 * IntegerType.cs
 */
 function IntegerType(module, name, lexer) {
+    this._type = "IntegerType";
     this._name = name;
+    this._module = module;
     this._isEnumeration = new Boolean() = false;
     this._map = [];
     this._ranges = [];
@@ -870,7 +884,9 @@ function IntegerType(module, name, lexer) {
 * Sequence.cs
 */
 function Sequence(module, name, lexer) {
+    this._type = "Sequence";
     this._name = name;
+    this._module = module;
     // parse between ( )
     var temp = lexer.GetNextNonEOLSymbol();
     var bracketSection = 0;
@@ -890,141 +906,138 @@ function Sequence(module, name, lexer) {
 * TextualConvention.cs
 * TODO-DisplayHint,StatusHelper.CreateStatus,BitsType,IntegerType,OctetStringType,IpAddressType,Counter64Type,UnsignedType,ObjectIdentifierType,CustomType
 */
-function TextualConvention(module, name, lexer){
-            this._name = name;
-            this._displayHint;
-            this._status;
-            this._description;
-            this._reference;
-            this._syntax;
+function TextualConvention(module, name, lexer) {
+    this._type = "TextualConvention";
+    this._name = name;
+    this._module = module;
+    this._displayHint;
+    this._status;
+    this._description;
+    this._reference;
+    this._syntax;
 
-            var temp = lexer.GetNextNonEOLSymbol();
+    var temp = lexer.GetNextNonEOLSymbol();
 
-            if (temp.text == Symbol.DisplayHint.text){
-                // TODO: this needs decoding to a useful format.
-                this._displayHint = new DisplayHint(lexer.GetNextNonEOLSymbol().ToString().replace(/"/gi,""));//Trim(new[] { '"' }));
-                temp = lexer.GetNextNonEOLSymbol();
-            }
+    if (temp.text == Symbol.DisplayHint.text) {
+        // TODO: this needs decoding to a useful format.
+        this._displayHint = new DisplayHint(lexer.GetNextNonEOLSymbol().ToString().replace(/"/gi, "")); //Trim(new[] { '"' }));
+        temp = lexer.GetNextNonEOLSymbol();
+    }
 
-            temp.Expect(Symbol.Status);
-            try{
-                this._status = StatusHelper.CreateStatus(lexer.GetNextNonEOLSymbol().ToString());
-                temp = lexer.GetNextNonEOLSymbol();
-            }
-            catch (ArgumentException){
-                temp.Throw("Invalid status");
-            }
+    temp.Expect(Symbol.Status);
+    try {
+        this._status = StatusHelper.CreateStatus(lexer.GetNextNonEOLSymbol().ToString());
+        temp = lexer.GetNextNonEOLSymbol();
+    }
+    catch (ArgumentException) {
+        temp.Throw("Invalid status");
+    }
 
-            temp.Expect(Symbol.Description);
-            this._description = lexer.GetNextNonEOLSymbol().ToString().replace(/"/gi,"");//Trim(new[] { '"' });
-            temp = lexer.GetNextNonEOLSymbol();
+    temp.Expect(Symbol.Description);
+    this._description = lexer.GetNextNonEOLSymbol().ToString().replace(/"/gi, ""); //Trim(new[] { '"' });
+    temp = lexer.GetNextNonEOLSymbol();
 
-            if (temp.text == Symbol.Reference.text){
-                this._reference = lexer.GetNextNonEOLSymbol().ToString();
-                temp = lexer.GetNextNonEOLSymbol();
-            }
+    if (temp.text == Symbol.Reference.text) {
+        this._reference = lexer.GetNextNonEOLSymbol().ToString();
+        temp = lexer.GetNextNonEOLSymbol();
+    }
 
-            temp.Expect(Symbol.Syntax);
+    temp.Expect(Symbol.Syntax);
 
-            /* 
-             * RFC2579 definition:
-             *       Syntax ::=   -- Must be one of the following:
-             *                    -- a base type (or its refinement), or
-             *                    -- a BITS pseudo-type
-             *               type
-             *             | "BITS" "{" NamedBits "}"
-             *
-             * From section 3.5:
-             *      The data structure must be one of the alternatives defined
-             *      in the ObjectSyntax CHOICE or the BITS construct.  Note
-             *      that this means that the SYNTAX clause of a Textual
-             *      Convention can not refer to a previously defined Textual
-             *      Convention.
-             *      
-             *      The SYNTAX clause of a TEXTUAL CONVENTION macro may be
-             *      sub-typed in the same way as the SYNTAX clause of an
-             *      OBJECT-TYPE macro.
-             * 
-             * Therefore the possible values are (grouped by underlying type):
-             *      INTEGER, Integer32
-             *      OCTET STRING, Opaque
-             *      OBJECT IDENTIFIER
-             *      IpAddress
-             *      Counter64
-             *      Unsigned32, Counter32, Gauge32, TimeTicks
-             *      BITS
-             * With appropriate sub-typing.
-             */
+    /* 
+    * RFC2579 definition:
+    *       Syntax ::=   -- Must be one of the following:
+    *                    -- a base type (or its refinement), or
+    *                    -- a BITS pseudo-type
+    *               type
+    *             | "BITS" "{" NamedBits "}"
+    *
+    * From section 3.5:
+    *      The data structure must be one of the alternatives defined
+    *      in the ObjectSyntax CHOICE or the BITS construct.  Note
+    *      that this means that the SYNTAX clause of a Textual
+    *      Convention can not refer to a previously defined Textual
+    *      Convention.
+    *      
+    *      The SYNTAX clause of a TEXTUAL CONVENTION macro may be
+    *      sub-typed in the same way as the SYNTAX clause of an
+    *      OBJECT-TYPE macro.
+    * 
+    * Therefore the possible values are (grouped by underlying type):
+    *      INTEGER, Integer32
+    *      OCTET STRING, Opaque
+    *      OBJECT IDENTIFIER
+    *      IpAddress
+    *      Counter64
+    *      Unsigned32, Counter32, Gauge32, TimeTicks
+    *      BITS
+    * With appropriate sub-typing.
+    */
 
-            temp = lexer.GetNextNonEOLSymbol();
-            if (temp.text == Symbol.Bits.text){
-                this._syntax = new BitsType(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.Integer.text || temp.text == Symbol.Integer32.text){
-                this._syntax = new IntegerType(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.Octet.text){
-                temp = lexer.GetNextSymbol();
-                temp.Expect(Symbol.String);
-                this._syntax = new OctetStringType(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.Opaque.text){
-                this._syntax = new OctetStringType(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.IpAddress.text){
-                this._syntax = new IpAddressType(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.Counter64.text){
-                this._syntax = new Counter64Type(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.Unsigned32.text || temp.text == Symbol.Counter32.text || temp.text == Symbol.Gauge32.text || temp.text == Symbol.TimeTicks.text){
-                this._syntax = new UnsignedType(module, string.Empty, lexer);
-            }
-            else if (temp.text == Symbol.Object.text){
-                temp = lexer.GetNextSymbol();
-                temp.Expect(Symbol.Identifier);
-                this._syntax = new ObjectIdentifierType(module, string.Empty, lexer);
-            }
-            else
-            {
-                //temp.Throw("illegal syntax for textual convention");
-                this._syntax = new CustomType(module, string.Empty, lexer);
-            }
-        }
+    temp = lexer.GetNextNonEOLSymbol();
+    if (temp.text == Symbol.Bits.text) {
+        this._syntax = new BitsType(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.Integer.text || temp.text == Symbol.Integer32.text) {
+        this._syntax = new IntegerType(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.Octet.text) {
+        temp = lexer.GetNextSymbol();
+        temp.Expect(Symbol.String);
+        this._syntax = new OctetStringType(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.Opaque.text) {
+        this._syntax = new OctetStringType(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.IpAddress.text) {
+        this._syntax = new IpAddressType(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.Counter64.text) {
+        this._syntax = new Counter64Type(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.Unsigned32.text || temp.text == Symbol.Counter32.text || temp.text == Symbol.Gauge32.text || temp.text == Symbol.TimeTicks.text) {
+        this._syntax = new UnsignedType(module, string.Empty, lexer);
+    }
+    else if (temp.text == Symbol.Object.text) {
+        temp = lexer.GetNextSymbol();
+        temp.Expect(Symbol.Identifier);
+        this._syntax = new ObjectIdentifierType(module, string.Empty, lexer);
+    }
+    else {
+        //temp.Throw("illegal syntax for textual convention");
+        this._syntax = new CustomType(module, string.Empty, lexer);
+    }
+}
 
 /**
 * TypeAssignment.cs
 */
- function TypeAssignment(module, name, last, lexer) {
-     this._module = module;
-     this._name = name;
-     var temp = lexer.CheckNextSymbol();
-     this.Value = last.ToString();
-     var previous = last; 
-     var veryPrevious = previous;
-     while ((temp = lexer.CheckNextSymbol()) != null) {
-         if (temp.text == "IDENTIFIER") {
-             this.Value += " " + temp.text;
-             temp = lexer.GetNextSymbol();
-             return
-         }
-         if (temp.text == "]" && previous.text=="APPLICATION") {
-             this.Value += " " + "APPLICATION";
-             temp = lexer.GetNextSymbol();
-             return
-         }
-         if (veryPrevious.text == Symbol.EOL.text && previous.text == Symbol.EOL.text && temp.IsValidIdentifier()) {
-             
-             return;
-         }
-         veryPrevious = previous;
-         temp = lexer.GetNextSymbol();
-         previous = temp;
-         
-     }
-     //console.log("TypeAssignment:end of file reached");
-     //previous.Throw("end of file reached");
- }
+function TypeAssignment(module, name, last, lexer) {
+    this._type = "TypeAssignment";
+    this._module = module;
+    this._name = name;
+    var temp = lexer.CheckNextSymbol();
+    this.Value = last.ToString();
+    var previous = last;
+    var veryPrevious = previous;
+    while ((temp = lexer.CheckNextSymbol()) != null) {
+        if (veryPrevious.text == Symbol.EOL.text && previous.text == Symbol.EOL.text && temp.IsValidIdentifier()) {
+
+            return;
+        }
+        if (temp.text == "IDENTIFIER") {
+            this.Value += " " + temp.text;
+            temp = lexer.GetNextSymbol();
+            return
+        }
+        temp = lexer.GetNextSymbol();
+        veryPrevious = previous;
+        previous = temp;
+
+    }
+    //console.log("TypeAssignment:end of file reached");
+    //previous.Throw("end of file reached");
+}
 
 
 
@@ -1034,18 +1047,75 @@ function TextualConvention(module, name, lexer){
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
+console.log(lexer._symbols.length);
+var Buffer = [];
+var Value = [];
+var Variable = [];
+var CharString = "";
+var EOL_Index = 0;
+var Assign_Index = 0;
+var Buffer_Index = 0;
+var temp=lexer.CheckNextSymbol();
+while (temp != null) {
+    if (temp.text == Symbol.EOL.text) {
+        EOL_Index = Buffer_Index;
+    }
+    else if (temp.text == Symbol.Assign.text) {
+        Assign_Index = Buffer_Index;
+
+        for (var i = 0; i < Variable.length; i++) {
+            if (Variable[i] != null) {
+                CharString += " " + Variable[i].text;
+            }
+        }
+
+        Variable = [];
+        for (var i = EOL_Index; i <= Assign_Index; i++) {
+            Variable[i] = Buffer[i];
+        }
+        Value = [];
+        for (var i = 0; i < EOL_Index; i++) {
+            Value[i] = Buffer[i];
+        }
+
+        for (var i = 0; i < Value.length; i++) {
+            CharString += " " + Value[i].text;
+        }
+
+
+        Buffer = [];
+        Buffer_Index = 0;
+        console.log(CharString);
+        CharString = "";
+    }
+    else {
+            Buffer_Index++;
+            Buffer.push(temp);
+    }
+    temp = lexer.GetNextSymbol();
+};
+
+
+//lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
 //Parse->Parseline->ParseB(fill buffer, create symbols)->
 
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
 //console.log(lexer);
+
+
+
+/*
 var doc = new MibDocument(lexer);
 for (var i = 0; i < doc._modules.length; i++) {
     console.log("_____________________________________________________________________");
     console.log("MibDocument.MibModule[" + i + "]:", doc._modules[i]);
     console.log("_____________________________________________________________________");
 }
+*/
+
+
 /// <summary>
 /// Lexer parses MIB file into Symbol list.
 /// Create MibDocument from Lexer.
@@ -1080,8 +1150,6 @@ lex.Parse('RFC_BASE_MINIMUM/CISCO-STACK-MIB-V1SMI.MIB');
 lex.Parse('RFC_BASE_MINIMUM/CISCO-CDP-MIB-V1SMI_edit.my');
 */
 //console.log(doc._modules);
-
-
 
 
 
