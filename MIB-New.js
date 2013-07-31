@@ -373,17 +373,21 @@ Lexer.prototype.GetNextNonEOLSymbol = function () {
     return result; //Symbol
 }
 Lexer.prototype.GetNextSymbol = function () {
-    while (this._index < this._symbols.length) {
-        var next = this._symbols[this._index++];
 
+    var next=null;
+    while (this._index < this._symbols.length) {
+        next = this._symbols[this._index++];
         if (next.IsComment()) {
+            //console.log("\t\t" + next.text);
             continue;
         }
+        //console.log(next.text);
         if (next.text != "") {
             return next;
         }
     }
-    return null;
+    //console.log("---------END----------" + next.text);
+    return next;
 }
 Lexer.prototype.CheckNextNonEOLSymbol = function () {
     var length = 0;
@@ -1048,29 +1052,58 @@ function TypeAssignment(module, name, last, lexer) {
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
+/*
+lexer.Parse('RFC_BASE_MINIMUM/SNMPv2-SMI-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/SNMPv2-TC-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/SNMPv2-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/IANAifType-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/IF-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/HOST-RESOURCES-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/RFC1514-HOSTS.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/LMMIB2.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/BRIDGE-MIB.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/Printer-MIB.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/MSFT.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/CISCO-SMI-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/CISCO-PRODUCTS-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/CISCO-TC-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/CISCO-VTP-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/CISCO-STACK-MIB-V1SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/CISCO-CDP-MIB-V1SMI_edit.my');
+*/
 console.log(lexer._symbols.length);
 ///Variable ::= Value
 var Buffer = [];
 var Value = [];
 var Variable = [];
 var CharString = "";
+var VariableString = "";
+var ValueString = "";
 var EOL_Index = 0;
 var Assign_Index = 0;
 var Buffer_Index = 0;
-var temp=lexer.CheckNextSymbol();
+var ObjectBuffer = [];
+var VariableBuffer = [];
+var ValueBuffer = [];
+var temp = lexer.CheckNextSymbol();
 while (temp != null) {
-    if (temp.text == Symbol.EOL.text) {                     ///   EOL (End of Line)
+    if (temp.text == Symbol.EOL.text ) {                     ///   EOL (End of Line)
         EOL_Index = Buffer_Index;
+        //Buffer_Index++;
+        //Buffer.push(temp);
     }
-    else if (temp.text == Symbol.Assign.text) {             ///   ::= Assingment
+    else if (temp.text == Symbol.Assign.text || temp.text == Symbol.End.text) {             ///   ::= Assingment or End
         Assign_Index = Buffer_Index;
-
         Buffer_Index++;
         Buffer.push(temp);
-                                                            /// We key off of Assign but the the Symbol comes after the Variable
-        for (var i = 0; i < Variable.length; i++) {         /// So we must store the Variables EOL to Assign
-            if (Variable[i] != null) {                      
-                CharString += " " + Variable[i].text;       /// Assemble all Variables into String 
+
+
+        /// We key off of Assign but the the Symbol comes after the Variable
+        for (var i = 0; i < Variable.length; i++) { 
+            if (Variable[i] != null) {
+                VariableString += " " + Variable[i].text;       /// Assemble all Variables into String 
             }
         }
 
@@ -1078,28 +1111,42 @@ while (temp != null) {
         for (var i = EOL_Index; i <= Assign_Index; i++) {   /// Assemble all Variables from Buffer(EOL<-----Variables----->Assign)
             Variable[i] = Buffer[i];
         }
+
+
         Value = [];                                         /// Init Value buffer             
         for (var i = 0; i < EOL_Index; i++) {               /// Assemble all Value from Buffer(0<-----Values----->EOL)
             Value[i] = Buffer[i];
+            if (Value[i].text == Symbol.CloseBracket.text) {/// CloseBracket indicates end of Values and start of Variables
+                i++;
+                for (i; i < EOL_Index; i++) {               /// Assemble all Variables from Buffer(CloseBracket<-----Variables----->EOL)
+                    Variable[i] = Buffer[i];
+                }
+                break;
+            }
         }
 
         for (var i = 0; i < Value.length; i++) {           /// Assemble all Values into String 
-            CharString += " " + Value[i].text;
+            ValueString += " " + Value[i].text;
         }
 
 
         Buffer = [];                                       /// Init Buffer
         Buffer_Index = 0;                                  /// Init Buffer_Index
-        console.log("_____" + CharString);                 /// log Variable ::= Value
-        CharString = "";                                   /// Reset CharString
+        //console.log("_____" + VariableString + ValueString);                 /// log Variable ::= Value
+        //ObjectBuffer.push(VariableString + ValueString);
+        //ObjectBuffer.push(Variable + Value);
+        VariableBuffer.push(Variable);
+        ValueBuffer.push(Value);
+        VariableString = "";
+        ValueString = "";                                   /// Reset CharString
     }
     else if (temp.text == Symbol.Begin.text || temp.text == Symbol.End.text) {
-        Buffer_Index++;
-        Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
+        //Buffer_Index++;
+        //Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
         Buffer_Index++;
         Buffer.push(temp);
-        Buffer_Index++;
-        Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
+        //Buffer_Index++;
+        //Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
     }
     else {
         Buffer_Index++;
@@ -1107,6 +1154,28 @@ while (temp != null) {
     }
     temp = lexer.GetNextSymbol();
 };
+
+
+var VarString = "";
+var ValString = "";
+for (var i = 0; i < VariableBuffer.length; i++) {
+        for (var ii = 0; ii < VariableBuffer[i].length; ii++) {
+            if (VariableBuffer[i][ii] != null) {
+                VarString += VariableBuffer[i][ii].text + " ";
+            }
+            if (ValueBuffer[i][ii] != null) {
+                ValString += ValueBuffer[i][ii].text + " ";
+            }
+        }
+        console.log("Object[" + i + "]:" + VarString);
+        console.log(ValString);
+        ValString = ""
+        VarString = "";
+}
+
+function ParseObject(VarBuffer, ValBuffer) {
+
+}
 
 
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
@@ -1122,9 +1191,9 @@ while (temp != null) {
 /*
 var doc = new MibDocument(lexer);
 for (var i = 0; i < doc._modules.length; i++) {
-    console.log("_____________________________________________________________________");
-    console.log("MibDocument.MibModule[" + i + "]:", doc._modules[i]);
-    console.log("_____________________________________________________________________");
+console.log("_____________________________________________________________________");
+console.log("MibDocument.MibModule[" + i + "]:", doc._modules[i]);
+console.log("_____________________________________________________________________");
 }
 */
 
@@ -1163,8 +1232,4 @@ lex.Parse('RFC_BASE_MINIMUM/CISCO-STACK-MIB-V1SMI.MIB');
 lex.Parse('RFC_BASE_MINIMUM/CISCO-CDP-MIB-V1SMI_edit.my');
 */
 //console.log(doc._modules);
-
-
-
-
 
