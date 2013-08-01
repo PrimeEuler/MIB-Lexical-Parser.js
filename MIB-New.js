@@ -1052,7 +1052,7 @@ function TypeAssignment(module, name, last, lexer) {
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
-lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/RFC-1215.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
 /*
 lexer.Parse('RFC_BASE_MINIMUM/SNMPv2-SMI-V1SMI.MIB');
@@ -1084,10 +1084,10 @@ var ValueString = "";
 var EOL_Index = 0;
 var Assign_Index = 0;
 var Buffer_Index = 0;
-var ObjectBuffer = [];
 var VariableBuffer = [];
 var ValueBuffer = [];
-var temp = lexer.CheckNextSymbol();
+VariableBuffer.push([Symbol.EOL]);//index adjust /// We key off of Assign but the the Symbol comes after the Variable
+var temp = lexer.GetNextSymbol();
 while (temp != null) {
     if (temp.text == Symbol.EOL.text ) {                     ///   EOL (End of Line)
         EOL_Index = Buffer_Index;
@@ -1099,19 +1099,10 @@ while (temp != null) {
         Buffer_Index++;
         Buffer.push(temp);
 
-
-        /// We key off of Assign but the the Symbol comes after the Variable
-        for (var i = 0; i < Variable.length; i++) { 
-            if (Variable[i] != null) {
-                VariableString += " " + Variable[i].text;       /// Assemble all Variables into String 
-            }
-        }
-
         Variable = [];                                      /// Init Variable buffer
         for (var i = EOL_Index; i <= Assign_Index; i++) {   /// Assemble all Variables from Buffer(EOL<-----Variables----->Assign)
             Variable[i] = Buffer[i];
         }
-
 
         Value = [];                                         /// Init Value buffer             
         for (var i = 0; i < EOL_Index; i++) {               /// Assemble all Value from Buffer(0<-----Values----->EOL)
@@ -1125,28 +1116,18 @@ while (temp != null) {
             }
         }
 
-        for (var i = 0; i < Value.length; i++) {           /// Assemble all Values into String 
-            ValueString += " " + Value[i].text;
-        }
-
 
         Buffer = [];                                       /// Init Buffer
         Buffer_Index = 0;                                  /// Init Buffer_Index
-        //console.log("_____" + VariableString + ValueString);                 /// log Variable ::= Value
-        //ObjectBuffer.push(VariableString + ValueString);
-        //ObjectBuffer.push(Variable + Value);
         VariableBuffer.push(Variable);
         ValueBuffer.push(Value);
         VariableString = "";
         ValueString = "";                                   /// Reset CharString
     }
     else if (temp.text == Symbol.Begin.text || temp.text == Symbol.End.text) {
-        //Buffer_Index++;
-        //Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
         Buffer_Index++;
         Buffer.push(temp);
-        //Buffer_Index++;
-        //Buffer.push(Symbol.EOL); //ADD EOL FOR LOGGING 
+
     }
     else {
         Buffer_Index++;
@@ -1154,7 +1135,7 @@ while (temp != null) {
     }
     temp = lexer.GetNextSymbol();
 };
-
+ValueBuffer.push([Symbol.EOL]);//index adjust
 
 var VarString = "";
 var ValString = "";
@@ -1163,17 +1144,91 @@ for (var i = 0; i < VariableBuffer.length; i++) {
             if (VariableBuffer[i][ii] != null) {
                 VarString += VariableBuffer[i][ii].text + " ";
             }
+        }
+        for (var ii = 0; ii < ValueBuffer[i].length; ii++) {
             if (ValueBuffer[i][ii] != null) {
                 ValString += ValueBuffer[i][ii].text + " ";
             }
         }
-        console.log("Object[" + i + "]:" + VarString);
-        console.log(ValString);
+        //console.log(VarString + "\n\t\t" + ValString);/// Verify reassembly
+        ParseObject(VariableBuffer, ValueBuffer);
+    /*(
+        Typically, there are three kinds of information modules:
+        (1) MIB modules, which contain definitions of inter-related
+        managed objects, make use of the OBJECT-TYPE and
+        NOTIFICATION-TYPE macros;
+        (2) compliance statements for MIB modules, which make use of
+        the MODULE-COMPLIANCE and OBJECT-GROUP macros [2]; and,
+        (3) capability statements for agent implementations which
+        make use of the AGENT-CAPABILITIES macros [2].
+
+        3.1. Macro Invocation
+        Within an information module, each macro invocation appears
+        as:
+        <descriptor> <macro> <clauses> ::= <value>
+                           <VarString> ::= <ValString>
+        EX:   
+            <descriptor>sysDescr</descriptor>
+            <macro>OBJECT-TYPE</macro>
+            <clauses>
+                SYNTAX DisplayString ( SIZE ( 0 .. 255 ) )
+                ACCESS read-only 
+                STATUS mandatory 
+                DESCRIPTION "A textual description of the network management subsystem"
+            </clauses>
+            ::=
+            <value>{ system 1 }</value>
+
+         3.1.1. Textual Clauses
+        Some clauses in a macro invocation may take a textual value
+        (e.g., the DESCRIPTION clause).
+   
+           
+     */
         ValString = ""
         VarString = "";
 }
 
-function ParseObject(VarBuffer, ValBuffer) {
+function ParseObject(VariableBuffer, ValueBuffer) {
+
+    for (var ii = 0; ii < VariableBuffer[i].length; ii++) {
+        if (VariableBuffer[i][ii] != null) {
+            var temp = VariableBuffer[i][ii].text;
+            switch (temp){
+                case Symbol.Object.text:
+                    if (VariableBuffer[i][ii + 1].text == "IDENTIFIER") { ii++; }
+                    console.log("<MACRO/CLAUSE>", temp + " IDENTIFIER");
+                    break;
+                case Symbol.Assign.text:
+                    break;
+                case Symbol.Syntax.text:
+                    break;
+                default:
+                    if(Char.IsLetter(temp.charAt(0)) && temp.charAt(0).toUpperCase() == temp.charAt(0)){
+                        /*
+                            this is a <macro> or a <clause>.
+                            if <macro> does not exist, create it.
+                        */
+                        console.log("<MACRO/CLAUSE>", temp);
+                    }
+                    if (Char.IsLetter(temp.charAt(0)) && temp.charAt(0).toLowerCase() == temp.charAt(0)) {
+                        /*
+                            this is a <descriptor>.
+                            a <macro> and/or <clauses> should follow
+                        */
+                        console.log("<descriptor>", temp);
+                    }
+                    break;
+
+
+            }
+        }
+    }
+    for (var ii = 0; ii < ValueBuffer[i].length; ii++) {
+        if (ValueBuffer[i][ii] != null) {
+            ValString += ValueBuffer[i][ii].text + " ";
+        }
+    }
 
 }
 
