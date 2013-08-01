@@ -471,9 +471,156 @@ Lexer.prototype.ParseOidValue = function (OidValueAssignment) {
 
     //throw MibException.Create("end of file reached", previous);
 }
+Lexer.prototype.CompileObjects = function () {
+    ///Variable ::= Value
+    var Buffer = [];
+    var Value = [];
+    var Variable = [];
+    var EOL_Index = 0;
+    var Assign_Index = 0;
+    var Buffer_Index = 0;
+    var VariablesBuffer = [];
+    var ValuesBuffer = [];
+    VariablesBuffer.push([Symbol.EOL]); //index offset
+    var symbol = lexer.GetNextSymbol();
+    while (symbol != null) {
+        if (symbol.text == Symbol.EOL.text) {                     ///   EOL (End of Line)
+            EOL_Index = Buffer_Index;
+            //Buffer_Index++;
+            //Buffer.push(symbol);
+        }
+        else if (symbol.text == Symbol.Assign.text || symbol.text == Symbol.End.text) {             ///   ::= Assingment or End
+            Assign_Index = Buffer_Index;
+            Buffer_Index++;
+            Buffer.push(symbol);
+            Variable = [];                                      /// Init Variable buffer
+            for (var i = EOL_Index; i <= Assign_Index; i++) {   /// Assemble all Variables from Buffer(EOL<-----Variables----->Assign)
+                Variable[i] = Buffer[i];
+            }
 
+            Value = [];                                         /// Init Value buffer             
+            for (var i = 0; i < EOL_Index; i++) {               /// Assemble all Value from Buffer(0<-----Values----->EOL)
+                Value[i] = Buffer[i];
+                if (Value[i].text == Symbol.CloseBracket.text) {/// CloseBracket indicates end of Values and start of Variables
+                    i++;
+                    for (i; i < EOL_Index; i++) {               /// Assemble all Variables from Buffer(CloseBracket<-----Variables----->EOL)
+                        Variable[i] = Buffer[i];
+                    }
+                    break;
+                }
+            }
+            Buffer = [];                                       /// Init Buffer
+            Buffer_Index = 0;                                  /// Init Buffer_Index
+            VariablesBuffer.push(Variable);                    /// Load Variable into Buffer with index
+            ValuesBuffer.push(Value);                           /// Load Value into Buffer with index -1 due to VariablesBuffer.push([Symbol.EOL]) index offset
+        }
+        else if (symbol.text == Symbol.Begin.text || symbol.text == Symbol.End.text) {
+            Buffer_Index++;
+            Buffer.push(symbol);
+
+        }
+        else {
+            Buffer_Index++;
+            Buffer.push(symbol);
+        }
+        symbol = lexer.GetNextSymbol();
+    };
+    ValuesBuffer.push([Symbol.EOL]); //index offset
+    this.ParseModule(VariablesBuffer, ValuesBuffer);
+}
+
+Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
+    var JSONString = "";
+    
+    for (var i = 0; i < VariablesBuffer.length; i++) {
+
+        var symbol = "";
+        for (var ii = 0; ii < VariablesBuffer[i].length; ii++) {
+            if (VariablesBuffer[i][ii] != null) {
+                symbol = VariablesBuffer[i][ii].text;
+                switch (symbol) {
+                    case Symbol.Definitions.text:
+                        if (ValuesBuffer[i][0].text == Symbol.Begin.text) {
+                            //Begin new JSON Module with Definitions 
+                            console.log("<" + VariablesBuffer[i][ii - 1].text + ">");
+                            console.log("<" + symbol + ">");
+                            JSONString += "{\"" + VariablesBuffer[i][ii - 1].text + "\":{";
+                            JSONString += "\"" + symbol + "\" : {"; 
+                        }
+                        break;
+                    case Symbol.Object.text:
+                        if (VariablesBuffer[i][ii + 1].text == "IDENTIFIER") { ii++; }
+                        console.log("\t\t<MACRO>", symbol + " IDENTIFIER");
+                        break;
+                    case Symbol.End.text:
+                        JSONString += "\t}";
+                        break;
+                    default:
+                        if (Char.IsLetter(symbol.charAt(0)) && symbol.charAt(0).toUpperCase() == symbol.charAt(0)) {
+                            /*
+                            this is a <macro> or a <clause>.
+                            if <macro> does not exist, create it.
+                            */
+                            console.log("\t\t<MACRO/CLAUSE>", symbol);
+                        }
+                        if (Char.IsLetter(symbol.charAt(0)) && symbol.charAt(0).toLowerCase() == symbol.charAt(0)) {
+                            /*
+                            this is a <descriptor>.
+                            a <macro> and/or <clauses> should follow
+                            */
+                            console.log("\t<descriptor>", symbol);
+                        }
+                        break;
+
+
+                }
+            }
+        }
+        symbol = "";
+        for (var ii = 0; ii < ValuesBuffer[i].length; ii++) {
+            if (ValuesBuffer[i][ii] != null) {
+                var symbol = ValuesBuffer[i][ii].text;
+                
+                switch (symbol) {
+                    case Symbol.Syntax.text:
+                        break;
+                    case Symbol.Exports.text:
+                        JSONString += "\"" + symbol + "\" : ["
+                        ii++
+                        while (ii < ValuesBuffer[i].length) {
+                            symbol = ValuesBuffer[i][ii].text;
+                            ii++;
+                            if (Char.IsLetter(symbol)) {
+                                JSONString += "\"" + symbol + "\"";
+                            }
+                            else if (symbol == ";") {
+                                JSONString += "]"
+                            }
+                            else {
+                                JSONString += symbol;
+                            }
+
+                        }
+                        
+                        break
+                    default:
+                        //JSONString += ValuesBuffer[i][ii].text + " ";
+                        break;
+                }
+            }
+        }
+    }
+    console.log("\t<value>", symbol);
+    JSONString += "}";
+    //console.log(JSONString);
+    var Module = eval("(" + JSONString + ")");
+    //Module["RFC1155-SMI"].DEFINITIONS.EXPORTS[0] == Internet
+    console.log(Module);
+}
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
+console.log(lexer._symbols.length);
+lexer.CompileObjects();
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
@@ -496,197 +643,9 @@ lexer.Parse('RFC_BASE_MINIMUM/CISCO-VTP-MIB-V1SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/CISCO-STACK-MIB-V1SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/CISCO-CDP-MIB-V1SMI_edit.my');
 */
-console.log(lexer._symbols.length);
-///Variable ::= Value
-var Buffer = [];
-var Value = [];
-var Variable = [];
-var CharString = "";
-var VariableString = "";
-var ValueString = "";
-var EOL_Index = 0;
-var Assign_Index = 0;
-var Buffer_Index = 0;
-var VariableBuffer = [];
-var ValueBuffer = [];
-VariableBuffer.push([Symbol.EOL]); //index adjust /// We key off of Assign but the the Symbol comes after the Variable
-var temp = lexer.GetNextSymbol();
-while (temp != null) {
-    if (temp.text == Symbol.EOL.text) {                     ///   EOL (End of Line)
-        EOL_Index = Buffer_Index;
-        //Buffer_Index++;
-        //Buffer.push(temp);
-    }
-    else if (temp.text == Symbol.Assign.text || temp.text == Symbol.End.text) {             ///   ::= Assingment or End
-        Assign_Index = Buffer_Index;
-        Buffer_Index++;
-        Buffer.push(temp);
-
-        Variable = [];                                      /// Init Variable buffer
-        for (var i = EOL_Index; i <= Assign_Index; i++) {   /// Assemble all Variables from Buffer(EOL<-----Variables----->Assign)
-            Variable[i] = Buffer[i];
-        }
-
-        Value = [];                                         /// Init Value buffer             
-        for (var i = 0; i < EOL_Index; i++) {               /// Assemble all Value from Buffer(0<-----Values----->EOL)
-            Value[i] = Buffer[i];
-            if (Value[i].text == Symbol.CloseBracket.text) {/// CloseBracket indicates end of Values and start of Variables
-                i++;
-                for (i; i < EOL_Index; i++) {               /// Assemble all Variables from Buffer(CloseBracket<-----Variables----->EOL)
-                    Variable[i] = Buffer[i];
-                }
-                break;
-            }
-        }
 
 
-        Buffer = [];                                       /// Init Buffer
-        Buffer_Index = 0;                                  /// Init Buffer_Index
-        VariableBuffer.push(Variable);
-        ValueBuffer.push(Value);
-        VariableString = "";
-        ValueString = "";                                   /// Reset CharString
-    }
-    else if (temp.text == Symbol.Begin.text || temp.text == Symbol.End.text) {
-        Buffer_Index++;
-        Buffer.push(temp);
 
-    }
-    else {
-        Buffer_Index++;
-        Buffer.push(temp);
-    }
-    temp = lexer.GetNextSymbol();
-};
-ValueBuffer.push([Symbol.EOL]); //index adjust
-
-var VarString = "";
-var ValString = "";
-for (var i = 0; i < VariableBuffer.length; i++) {
-    for (var ii = 0; ii < VariableBuffer[i].length; ii++) {
-        if (VariableBuffer[i][ii] != null) {
-            VarString += VariableBuffer[i][ii].text + " ";
-        }
-    }
-    for (var ii = 0; ii < ValueBuffer[i].length; ii++) {
-        if (ValueBuffer[i][ii] != null) {
-            ValString += ValueBuffer[i][ii].text + " ";
-        }
-    }
-    //console.log(VarString + "\n\t\t" + ValString);/// Verify reassembly
-    ParseObject(VariableBuffer, ValueBuffer);
-    /*(
-    Typically, there are three kinds of information modules:
-    (1) MIB modules, which contain definitions of inter-related
-    managed objects, make use of the OBJECT-TYPE and
-    NOTIFICATION-TYPE macros;
-    (2) compliance statements for MIB modules, which make use of
-    the MODULE-COMPLIANCE and OBJECT-GROUP macros [2]; and,
-    (3) capability statements for agent implementations which
-    make use of the AGENT-CAPABILITIES macros [2].
-
-    3.1. Macro Invocation
-    Within an information module, each macro invocation appears
-    as:
-    <descriptor> <macro> <clauses> ::= <value>
-    <VarString> ::= <ValString>
-    EX:   
-    <descriptor>sysDescr</descriptor>
-    <macro>OBJECT-TYPE</macro>
-    <clauses>
-    SYNTAX DisplayString ( SIZE ( 0 .. 255 ) )
-    ACCESS read-only 
-    STATUS mandatory 
-    DESCRIPTION "A textual description of the network management subsystem"
-    </clauses>
-    ::=
-    <value>{ system 1 }</value>
-
-    3.1.1. Textual Clauses
-    Some clauses in a macro invocation may take a textual value
-    (e.g., the DESCRIPTION clause).
-   
-           
-    */
-    ValString = ""
-    VarString = "";
-}
-
-function ParseObject(VariableBuffer, ValueBuffer) {
-    var temp = "";
-    console.log("<MACRO INVOCTION>");
-    for (var ii = 0; ii < VariableBuffer[i].length; ii++) {
-        if (VariableBuffer[i][ii] != null) {
-            temp = VariableBuffer[i][ii].text;
-            switch (temp) {
-                case Symbol.Object.text:
-                    if (VariableBuffer[i][ii + 1].text == "IDENTIFIER") { ii++; }
-                    console.log("\t\t<MACRO>", temp + " IDENTIFIER");
-                    break;
-                case Symbol.Assign.text:
-                    break;
-                case Symbol.Syntax.text:
-                    break;
-                case Symbol.End.text:
-                    break;
-                default:
-                    if (Char.IsLetter(temp.charAt(0)) && temp.charAt(0).toUpperCase() == temp.charAt(0)) {
-                        /*
-                        this is a <macro> or a <clause>.
-                        if <macro> does not exist, create it.
-                        */
-                        console.log("\t\t<MACRO/CLAUSE>", temp);
-                    }
-                    if (Char.IsLetter(temp.charAt(0)) && temp.charAt(0).toLowerCase() == temp.charAt(0)) {
-                        /*
-                        this is a <descriptor>.
-                        a <macro> and/or <clauses> should follow
-                        */
-                        console.log("\t<descriptor>", temp);
-                    }
-                    break;
-
-
-            }
-        }
-    }
-    temp = "";
-    for (var ii = 0; ii < ValueBuffer[i].length; ii++) {
-        if (ValueBuffer[i][ii] != null) {
-            var symbol = ValueBuffer[i][ii].text;
-            switch (symbol) {
-                case Symbol.Begin.text:
-                    break;
-                case Symbol.Exports.text:
-                    temp += "{\"" + symbol + "\" : ["; //JSON Array
-                    ii++
-                    while (ii < ValueBuffer[i].length) {
-                        symbol = ValueBuffer[i][ii].text;
-                        ii++;
-                        if (Char.IsLetter(symbol)) {
-                            temp += "\"" + symbol + "\"";
-                        }
-                        else if (symbol == ";") {
-                        //SKIP ;
-                        }
-                        else {
-                            temp += symbol;
-                        }
-
-                    }
-                    temp += "]}";
-                    var obj = eval("(" + temp + ")");
-                    console.log(obj.EXPORTS[0]);
-                    break
-                default:
-                    temp += ValueBuffer[i][ii].text + " ";
-                    break;
-            }
-        }
-    }
-    console.log("\t<value>", temp);
-    console.log("</MACRO INVOCTION>");
-}
 
 
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
