@@ -1,4 +1,4 @@
-/// <summary>
+// <summary>
 ///http://tools.ietf.org/html/rfc2578
 ///http://cpansearch.perl.org/src/FTASSIN/SNMP-MIB-Compiler-0.04/lib/SNMP/MIB/Compiler.pm
 ///http://www.rfc-editor.org/rfc/pdfrfc/rfc1442.txt.pdf
@@ -531,7 +531,7 @@ Lexer.prototype.CompileObjects = function () {
 
 Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
     var JSONString = "";
-    
+
     for (var i = 0; i < VariablesBuffer.length; i++) {
 
         var symbol = "";
@@ -545,12 +545,24 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
                             console.log("<" + VariablesBuffer[i][ii - 1].text + ">");
                             console.log("<" + symbol + ">");
                             JSONString += "{\"" + VariablesBuffer[i][ii - 1].text + "\":{";
-                            JSONString += "\"" + symbol + "\" : {"; 
+                            JSONString += "\"" + symbol + "\" : {";
                         }
                         break;
                     case Symbol.Object.text:
                         if (VariablesBuffer[i][ii + 1].text == "IDENTIFIER") { ii++; }
                         console.log("\t\t<MACRO>", symbol + " IDENTIFIER");
+                        JSONString += "\"" + VariablesBuffer[i][ii - 2].text + "\" : {type:"
+                        JSONString += "\"" + symbol + " IDENTIFIER" + "\" , parent:\"" + ValuesBuffer[i][1].text 
+                        if (VariablesBuffer[i][ii - 2].text == "internet") {
+                            for (var v = 2; v <= 9; v++) {
+                                JSONString += " " + ValuesBuffer[i][v].text + " ";
+                            }
+                            JSONString += "\",index:\"" + ValuesBuffer[i][10].text + "\"},";
+                        }
+                        else {
+                            JSONString += "\",index:\"" + ValuesBuffer[i][2].text + "\"},";
+                        }
+
                         break;
                     case Symbol.End.text:
                         JSONString += "\t}";
@@ -580,7 +592,7 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
         for (var ii = 0; ii < ValuesBuffer[i].length; ii++) {
             if (ValuesBuffer[i][ii] != null) {
                 var symbol = ValuesBuffer[i][ii].text;
-                
+
                 switch (symbol) {
                     case Symbol.Syntax.text:
                         break;
@@ -594,14 +606,14 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
                                 JSONString += "\"" + symbol + "\"";
                             }
                             else if (symbol == ";") {
-                                JSONString += "]"
+                                JSONString += "],"
                             }
                             else {
                                 JSONString += symbol;
                             }
 
                         }
-                        
+
                         break
                     default:
                         //JSONString += ValuesBuffer[i][ii].text + " ";
@@ -615,7 +627,7 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
     //console.log(JSONString);
     var Module = eval("(" + JSONString + ")");
     //Module["RFC1155-SMI"].DEFINITIONS.EXPORTS[0] == Internet
-    console.log(Module);
+    console.log(Module["RFC1155-SMI"]);
 }
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
