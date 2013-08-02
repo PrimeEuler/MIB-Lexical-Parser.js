@@ -185,6 +185,7 @@ Symbol.Of = new Symbol("", "OF", -1, -1);
 function Lexer() {
     this._index = 0;
     this._symbols = [];
+    this._modules = [];
     this._buffer = new CharBuffer();
     this._stringSection = new Boolean();
     this._assignSection = new Boolean();
@@ -527,8 +528,8 @@ Lexer.prototype.CompileObjects = function () {
     };
     ValuesBuffer.push([Symbol.EOL]); //index offset
     this.ParseModule(VariablesBuffer, ValuesBuffer);
+    return this._modules;
 }
-
 Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
     var JSONString = "";
 
@@ -544,6 +545,8 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
                             //Begin new JSON Module with Definitions 
                             console.log("<" + VariablesBuffer[i][ii - 1].text + ">");
                             console.log("<" + symbol + ">");
+                            if (JSONString.length > 0) { JSONString += "}"; this._modules.push(JSONString); };
+                            JSONString = "";
                             JSONString += "{\"" + VariablesBuffer[i][ii - 1].text + "\":{";
                             JSONString += "\"" + symbol + "\" : {";
                         }
@@ -622,17 +625,25 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
             }
         }
     }
-    console.log("\t<value>", symbol);
-    JSONString += "}";
-    //console.log(JSONString);
-    var Module = eval("(" + JSONString + ")");
-    //Module["RFC1155-SMI"].DEFINITIONS.EXPORTS[0] == Internet
-    console.log(Module["RFC1155-SMI"]);
+    //console.log("\t<value>", symbol);
+    if (JSONString.length > 0) { JSONString += "}"; this._modules.push(JSONString); };
+    JSONString = "";
+    //eval("(" + JSONString + ")");
+    
 }
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
+//lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
+//lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
 console.log(lexer._symbols.length);
-lexer.CompileObjects();
+var Modules = lexer.CompileObjects();
+//console.log(Modules[0]);
+//console.log(Modules[2]);
+//Modules["RFC1155-SMI"].DEFINITIONS.EXPORTS[0] == Internet
+console.log(eval("(" + Modules[0] + ")"));
+console.log(eval("(" + Modules[1] + ")"));
+//console.log(eval("(" + Modules[2] + ")"));
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
