@@ -540,21 +540,23 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
             if (VariablesBuffer[i][ii] != null) {
                 symbol = VariablesBuffer[i][ii].text;
                 switch (symbol) {
-                    case Symbol.Definitions.text:
+                    case Symbol.Definitions.text://DEFINITIONS
                         if (ValuesBuffer[i][0].text == Symbol.Begin.text) {
                             //Begin new JSON Module with Definitions 
                             console.log("<" + VariablesBuffer[i][ii - 1].text + ">");
                             console.log("<" + symbol + ">");
-                            if (JSONString.length > 0) { JSONString += "}"; this._modules.push(JSONString); };
+
+                            if (JSONString.length > 0) { JSONString += "}"; this._modules.push(JSONString); };//eval("(" + JSONString + ")")
+
                             JSONString = "";
-                            JSONString += "{\"" + VariablesBuffer[i][ii - 1].text + "\":{";
-                            JSONString += "\"" + symbol + "\" : {";
+                            JSONString += "\n{\"" + VariablesBuffer[i][ii - 1].text + "\":\n\t\t{";
+                            JSONString += "\n\t\t\"" + symbol + "\" :";
                         }
                         break;
-                    case Symbol.Object.text:
+                    case Symbol.Object.text://OBJECT IDENTIFIER
                         if (VariablesBuffer[i][ii + 1].text == "IDENTIFIER") { ii++; }
                         console.log("\t\t<MACRO>", symbol + " IDENTIFIER");
-                        JSONString += "\"" + VariablesBuffer[i][ii - 2].text + "\" : {type:"
+                        JSONString += "\n\t\t\t\"" + VariablesBuffer[i][ii - 2].text + "\" :{ObjectName:"
                         JSONString += "\"" + symbol + " IDENTIFIER" + "\" , parent:\"" + ValuesBuffer[i][1].text 
                         if (VariablesBuffer[i][ii - 2].text == "internet") {
                             for (var v = 2; v <= 9; v++) {
@@ -568,7 +570,7 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
 
                         break;
                     case Symbol.End.text:
-                        JSONString += "\t}";
+                        JSONString += "}";//END OF OBJECT
                         break;
                     default:
                         if (Char.IsLetter(symbol.charAt(0)) && symbol.charAt(0).toUpperCase() == symbol.charAt(0)) {
@@ -599,14 +601,23 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
                 switch (symbol) {
                     case Symbol.Syntax.text:
                         break;
+                    case Symbol.Begin.text://BEGIN OBJECT
+                        if (VariablesBuffer[i][1] != null && VariablesBuffer[i][1].text == Symbol.Definitions.text) {
+
+                            JSONString += "\n\t\t\t{";
+                        }
+                        else {
+                            JSONString += "}\n\t\t\t{";
+                        }
+                        break;
                     case Symbol.Exports.text:
-                        JSONString += "\"" + symbol + "\" : ["
+                        JSONString += "\n\t\t\t\"" + symbol + "\" : ["
                         ii++
                         while (ii < ValuesBuffer[i].length) {
                             symbol = ValuesBuffer[i][ii].text;
                             ii++;
                             if (Char.IsLetter(symbol)) {
-                                JSONString += "\"" + symbol + "\"";
+                                JSONString += "\n\t\t\t\t\t\"" + symbol + "\"";
                             }
                             else if (symbol == ";") {
                                 JSONString += "],"
@@ -631,18 +642,64 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
     //eval("(" + JSONString + ")");
     
 }
+Lexer.prototype.GetOID = function (descriptor) {
+    var Modules = lexer.CompileObjects();
+    var JSON_Modules = "{Modules:\n[";
+    for (var m = 0; m < Modules.length; m++) {
+        JSON_Modules += Modules[m].toString() ;
+        if (m != Modules.length - 1) { JSON_Modules += "\n,"; }
+        //console.log(eval("(" + Modules[m].toString() + ")"));
+    }
+    JSON_Modules += "\n]\n}";
+    console.log( JSON_Modules);
+    Modules = null;
+    Modules = eval("(" + JSON_Modules + ")")
+    //console.log(Modules.Modules[0]["RFC1155-SMI"]["DEFINITIONS"]);
+    var DEFINITIONS = Modules.Modules[0]["RFC1155-SMI"]["DEFINITIONS"];
+    var OID = ""
+    for (var desriptors in DEFINITIONS) {
+        if (desriptors != "internet") {
+            if (DEFINITIONS[desriptors].ObjectName != null) {
+
+                switch (DEFINITIONS[desriptors].ObjectName) {
+                    case "OBJECT IDENTIFIER":
+                        var parent = DEFINITIONS[desriptors].parent;
+                        var OID = "1.3.6.1";
+                        while (DEFINITIONS[parent] != null && parent != "internet") {
+                            OID += "." + DEFINITIONS[parent].index;
+                            parent = DEFINITIONS[parent].parent
+                        }
+                        OID += "." + DEFINITIONS[desriptors].index
+                        console.log(OID);
+                        break;
+                    case "POOP":
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        /*
+        if (o.hasOwnProperty(propName)) {
+           alert(o[propName]);
+        }
+        */
+    }
+    //console.log(Modules.Modules[0]["RFC1155-SMI"]["DEFINITIONS"]["directory"].ObjectName);
+
+}
 var lexer = new Lexer();
 lexer.Parse('RFC_BASE_MINIMUM/RFC1155-SMI.MIB');
 lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
-//lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
+lexer.Parse('RFC_BASE_MINIMUM/RFC-1215.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1213-MIB-II.MIB');
-console.log(lexer._symbols.length);
-var Modules = lexer.CompileObjects();
-//console.log(Modules[0]);
-//console.log(Modules[2]);
+console.log(lexer.GetOID("poo"));
+
+
+
 //Modules["RFC1155-SMI"].DEFINITIONS.EXPORTS[0] == Internet
-console.log(eval("(" + Modules[0] + ")"));
-console.log(eval("(" + Modules[1] + ")"));
+//console.log(eval("(" + Modules[0] + ")"));
+//console.log(eval("(" + Modules[1] + ")"));
 //console.log(eval("(" + Modules[2] + ")"));
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1212.MIB');
 //lexer.Parse('RFC_BASE_MINIMUM/RFC1215.MIB');
