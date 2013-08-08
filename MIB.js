@@ -542,14 +542,14 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
                 switch (symbol) {
                     case Symbol.Definitions.text://DEFINITIONS
                         if (ValuesBuffer[i][0].text == Symbol.Begin.text) {
-                            //Begin new JSON Module with Definitions 
+                            //Begin new JSON Module with DEFINITIONS 
                             console.log("<" + VariablesBuffer[i][ii - 1].text + ">");
                             console.log("<" + symbol + ">");
 
-                            if (JSONString.length > 0) { JSONString += "}"; this._modules.push(JSONString); };//eval("(" + JSONString + ")")
+                            if (JSONString.length > 0) { JSONString += "\n}"; this._modules.push(JSONString); };//END OF Module
 
                             JSONString = "";
-                            JSONString += "\n{\"" + VariablesBuffer[i][ii - 1].text + "\":\n\t\t{";
+                            JSONString += "\n{\"" + VariablesBuffer[i][ii - 1].text + "\":\n\t\t{";//START OF Module
                             JSONString += "\n\t\t\"" + symbol + "\" :";
                         }
                         break;
@@ -617,7 +617,7 @@ Lexer.prototype.ParseModule = function (VariablesBuffer, ValuesBuffer) {
                             symbol = ValuesBuffer[i][ii].text;
                             ii++;
                             if (Char.IsLetter(symbol)) {
-                                JSONString += "\n\t\t\t\t\t\"" + symbol + "\"";
+                                JSONString += "\"" + symbol + "\"";//\n\t\t\t\t\t
                             }
                             else if (symbol == ";") {
                                 JSONString += "],"
